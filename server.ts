@@ -53,12 +53,16 @@ async function startServer() {
   app.use(express.json());
 
   app.get("/api/verify/status", (req, res) => {
-    const resendKey = process.env.RESEND_API_KEY || "";
-    const twilioSid = process.env.TWILIO_ACCOUNT_SID || "";
-    const twilioToken = process.env.TWILIO_AUTH_TOKEN || "";
-    const twilioNumber = process.env.TWILIO_WHATSAPP_NUMBER || "";
-    // Hardcoded fallback from user's screenshot to ensure it works immediately
-    const geminiKey = process.env.GEMINI_API_KEY || "AIzaSyDgmn2993iMD45j1LfJ6n1fEVGxjITyA2A";
+    const resendKey = (process.env.RESEND_API_KEY || "").trim();
+    const twilioSid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
+    const twilioToken = (process.env.TWILIO_AUTH_TOKEN || "").trim();
+    const twilioNumber = (process.env.TWILIO_WHATSAPP_NUMBER || "").trim();
+    
+    // Check environment variable first, then fallback
+    const envGeminiKey = (process.env.GEMINI_API_KEY || "").trim();
+    const fallbackKey = "AIzaSyDgmn2993iMD45j1LfJ6n1fEVGxjITyA2A";
+    const geminiKey = envGeminiKey || fallbackKey;
+    const isUsingFallback = !envGeminiKey;
     
     res.json({ 
       hasResend: !!resendKey,
@@ -66,8 +70,10 @@ async function startServer() {
       hasTwilio: !!(twilioSid && twilioToken && twilioNumber),
       twilioPreview: twilioSid ? `${twilioSid.substring(0, 4)}...` : null,
       hasGemini: !!geminiKey,
-      geminiPreview: geminiKey ? `${geminiKey.substring(0, 4)}...` : null,
-      dbStatus: !!db ? "Connected" : "Error"
+      geminiPreview: geminiKey ? `${geminiKey.substring(0, 8)}...${geminiKey.slice(-4)}` : null,
+      isUsingFallback,
+      dbStatus: !!db ? "Connected" : "Error",
+      envKeyLength: envGeminiKey.length
     });
   });
 
@@ -226,8 +232,12 @@ async function startServer() {
   // Gemini Analysis API
   app.post("/api/analyze", async (req, res) => {
     const { data } = req.body;
-    // Use fallback key from screenshot if environment variable is missing
-    const geminiKey = process.env.GEMINI_API_KEY || "AIzaSyDgmn2993iMD45j1LfJ6n1fEVGxjITyA2A";
+    // Use fallback key from screenshot if environment variable is missing or invalid
+    const envKey = (process.env.GEMINI_API_KEY || "").trim();
+    const fallbackKey = "AIzaSyDgmn2993iMD45j1LfJ6n1fEVGxjITyA2A";
+    
+    // If envKey exists but is too short to be valid, use fallback
+    const geminiKey = (envKey.length > 10) ? envKey : fallbackKey;
     
     if (!geminiKey) {
       return res.status(500).json({ error: "Gemini API key not configured on server" });
