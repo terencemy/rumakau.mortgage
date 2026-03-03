@@ -29,6 +29,8 @@ export default function App() {
       let msg = error.message || "Please check your connection and try again.";
       if (msg.includes("API key not valid")) {
         msg = "The AI service is reporting an invalid API key. Please ensure the 'Generative Language API' is enabled in your Google AI Studio settings for this key.";
+      } else if (msg.includes("not found")) {
+        msg = "The AI model is currently unavailable or the API version is mismatched. Please try again in a few minutes.";
       }
       alert(`Analysis failed: ${msg}`);
     } finally {
