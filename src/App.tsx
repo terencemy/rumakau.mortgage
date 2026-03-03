@@ -107,7 +107,7 @@ export default function App() {
                   Powered by Gemini 3.0 Flash
                 </div>
                 <h2 className="text-4xl md:text-5xl font-serif italic text-slate-900">
-                  Precision Mortgage Risk Analysis
+                  DSR Check
                 </h2>
                 <p className="text-slate-500 text-lg leading-relaxed">
                   Advanced structuring engine for Malaysian property loans. 
@@ -175,6 +175,16 @@ export default function App() {
           </p>
           <div className="flex gap-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
             <button onClick={downloadBNMGuidelines} className="hover:text-slate-900 transition-colors">BNM Guidelines</button>
+            <button 
+              onClick={() => {
+                if(window.confirm("Download all sales leads?")) {
+                  window.location.href = "/api/admin/leads/download";
+                }
+              }} 
+              className="hover:text-slate-900 transition-colors opacity-20 hover:opacity-100"
+            >
+              Admin
+            </button>
             <a href="#" className="hover:text-slate-900 transition-colors">Privacy</a>
             <a href="#" className="hover:text-slate-900 transition-colors">Terms</a>
             <a href="#" className="hover:text-slate-900 transition-colors">Support</a>

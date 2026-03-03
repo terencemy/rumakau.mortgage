@@ -5,8 +5,24 @@ import { fileURLToPath } from "url";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
+import Database from "better-sqlite3";
 
 dotenv.config();
+
+const db = new Database("leads.db");
+
+// Initialize database
+db.exec(`
+  CREATE TABLE IF NOT EXISTS leads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT,
+    contactType TEXT,
+    contactValue TEXT,
+    mainBorrowerName TEXT,
+    combinedDsr REAL,
+    riskGrade TEXT
+  )
+`);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -131,8 +147,140 @@ async function startServer() {
 
   // Lead capture API
   app.post("/api/leads", (req, res) => {
-    console.log("[LEAD] Captured:", req.body);
-    res.json({ success: true });
+    const { timestamp, contactType, contactValue, mainBorrowerName, combinedDsr, riskGrade } = req.body;
+    
+    try {
+      const stmt = db.prepare(`
+        INSERT INTO leads (timestamp, contactType, contactValue, mainBorrowerName, combinedDsr, riskGrade)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      stmt.run(timestamp, contactType, contactValue, mainBorrowerName, combinedDsr, riskGrade);
+      console.log("[LEAD] Saved to DB:", req.body);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[DB ERROR]", error);
+      res.status(500).json({ error: "Failed to save lead" });
+    }
+  });
+
+  // Admin Download API
+  app.get("/api/admin/leads/download", (req, res) => {
+    try {
+      const leads = db.prepare("SELECT * FROM leads ORDER BY timestamp DESC").all();
+      
+      if (leads.length === 0) {
+        return res.status(404).send("No leads found to download.");
+      }
+
+      // Generate CSV
+      const headers = ["ID", "Timestamp", "Type", "Contact", "Name", "DSR", "Grade"];
+      const rows = (leads as any[]).map(l => [
+        l.id,
+        l.timestamp,
+        l.contactType,
+        l.contactValue,
+        l.mainBorrowerName,
+        l.combinedDsr,
+        l.riskGrade
+      ]);
+
+      const csvContent = [
+        headers.join(","),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+      ].join("\n");
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", "attachment; filename=rumakau_leads.csv");
+      res.send(csvContent);
+    } catch (error) {
+      console.error("[DOWNLOAD ERROR]", error);
+      res.status(500).send("Failed to generate download");
+    }
+  });
+
+  // Gemini Analysis API
+  app.post("/api/analyze", async (req, res) => {
+    const { data } = req.body;
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "Gemini API key not configured on server" });
+    }
+
+    try {
+      const { GoogleGenAI, Type } = await import("@google/genai");
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      
+      const prompt = `
+        You are a Malaysia Mortgage Risk & Structuring AI Engine. 
+        Analyze the following mortgage application data and provide a detailed risk assessment based on Malaysian banking standards and Bank Negara Malaysia (BNM) guidelines.
+
+        DATA:
+        ${JSON.stringify(data, null, 2)}
+
+        TASKS:
+        1. Calculate Net Monthly Income for each borrower (Gross minus estimated EPF, SOCSO, PCB based on standard Malaysian rates if not provided).
+        2. Calculate the New Mortgage Installment using a Stress Test Interest Rate (Standard BNM practice: use 5.5% - 6.0% or current rate + 1.5%).
+        3. Calculate DSR (Debt Service Ratio) for the main borrower and joint borrower (if any) using: (Total Commitments + Stress Test Installment) / Net Income.
+        4. Calculate the combined DSR if it's a joint application.
+        5. Identify property risk factors (commercial title, high-rise risk, overvaluation).
+        6. Evaluate eligibility for requested loan types: ${data.loanTypes.join(", ")}.
+        7. Identify risk flags (e.g., Tenure > 35 years, Age + Tenure > 70, DSR > 70% for low income, CCRIS issues).
+        8. Suggest suitable bank category (Conservative, Moderate, Flexible).
+        9. Estimate approval probability %.
+        10. Suggest structuring improvements.
+        11. Suggest ideal loan tenure adjustment (Max 35 years).
+        12. Suggest required supporting documents for both borrowers.
+        13. Provide a short client explanation summary in Bahasa Malaysia.
+
+        IMPORTANT:
+        - Mask NRIC (only show last 4 digits).
+        - Do not store personal data.
+        - Align strictly with BNM Policy Document on Responsible Lending.
+        - Maximum loan tenure for residential properties is 35 years.
+        - Maximum age for loan repayment is 70 years.
+        - Use a stress test rate of at least 5.5% for DSR calculations.
+        - If the main borrower's DSR is too high, explain how the joint borrower helps or if further improvements are needed.
+      `;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              dsrMain: { type: Type.NUMBER, description: "Estimated DSR percentage for main borrower" },
+              dsrJoint: { type: Type.NUMBER, description: "Estimated DSR percentage for joint borrower (if any)" },
+              dsrCombined: { type: Type.NUMBER, description: "Combined DSR percentage" },
+              netMonthlyIncomeMain: { type: Type.NUMBER, description: "Estimated Net Monthly Income for main borrower" },
+              netMonthlyIncomeJoint: { type: Type.NUMBER, description: "Estimated Net Monthly Income for joint borrower" },
+              stressTestInstallment: { type: Type.NUMBER, description: "Calculated installment using stress test rate (5.5%+)" },
+              isJointApplication: { type: Type.BOOLEAN, description: "Whether it is a joint application" },
+              riskGrade: { type: Type.STRING, description: "Risk Grade (A, B, or C)" },
+              loanTypeSuitability: { type: Type.STRING, description: "Suitability analysis for loan types" },
+              approvalProbability: { type: Type.NUMBER, description: "Approval probability percentage (0-100)" },
+              riskFlags: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of identified risk flags" },
+              strategy: { type: Type.STRING, description: "Risk mitigation and structuring strategy" },
+              requiredDocuments: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of required supporting documents" },
+              clientExplanationBM: { type: Type.STRING, description: "Short client explanation in Bahasa Malaysia" },
+              structuringImprovements: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Specific structuring improvements" },
+              idealTenure: { type: Type.STRING, description: "Suggested ideal loan tenure" },
+              bankCategory: { type: Type.STRING, description: "Suitable bank category (Conservative, Moderate, Flexible)" }
+            },
+            required: [
+              "dsrMain", "dsrCombined", "netMonthlyIncomeMain", "stressTestInstallment", "isJointApplication", "riskGrade", "loanTypeSuitability", "approvalProbability", 
+              "riskFlags", "strategy", "requiredDocuments", "clientExplanationBM",
+              "structuringImprovements", "idealTenure", "bankCategory"
+            ]
+          }
+        }
+      });
+
+      res.json(JSON.parse(response.text || "{}"));
+    } catch (error: any) {
+      console.error("[GEMINI ERROR]", error);
+      res.status(500).json({ error: error.message });
+    }
   });
 
   if (process.env.NODE_ENV !== "production") {
