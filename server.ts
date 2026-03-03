@@ -91,10 +91,25 @@ async function startServer() {
     try {
       const { GoogleGenAI } = await import("@google/genai");
       const ai = new GoogleGenAI({ apiKey: geminiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: "Say 'Connection Successful'",
-      });
+      
+      let attempts = 0;
+      let response: any;
+      while (attempts < 3) {
+        try {
+          response = await ai.models.generateContent({
+            model: "gemini-1.5-flash-latest",
+            contents: "Say 'Connection Successful'",
+          });
+          break;
+        } catch (err: any) {
+          attempts++;
+          if (err.message?.includes("503") || err.message?.includes("UNAVAILABLE")) {
+            await new Promise(r => setTimeout(r, 1000 * attempts));
+          } else {
+            throw err;
+          }
+        }
+      }
       res.json({ success: true, message: response.text });
     } catch (error: any) {
       res.status(500).json({ 
@@ -308,40 +323,56 @@ async function startServer() {
         - If the main borrower's DSR is too high, explain how the joint borrower helps or if further improvements are needed.
       `;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              dsrMain: { type: Type.NUMBER, description: "Estimated DSR percentage for main borrower" },
-              dsrJoint: { type: Type.NUMBER, description: "Estimated DSR percentage for joint borrower (if any)" },
-              dsrCombined: { type: Type.NUMBER, description: "Combined DSR percentage" },
-              netMonthlyIncomeMain: { type: Type.NUMBER, description: "Estimated Net Monthly Income for main borrower" },
-              netMonthlyIncomeJoint: { type: Type.NUMBER, description: "Estimated Net Monthly Income for joint borrower" },
-              stressTestInstallment: { type: Type.NUMBER, description: "Calculated installment using stress test rate (5.5%+)" },
-              isJointApplication: { type: Type.BOOLEAN, description: "Whether it is a joint application" },
-              riskGrade: { type: Type.STRING, description: "Risk Grade (A, B, or C)" },
-              loanTypeSuitability: { type: Type.STRING, description: "Suitability analysis for loan types" },
-              approvalProbability: { type: Type.NUMBER, description: "Approval probability percentage (0-100)" },
-              riskFlags: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of identified risk flags" },
-              strategy: { type: Type.STRING, description: "Risk mitigation and structuring strategy" },
-              requiredDocuments: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of required supporting documents" },
-              clientExplanationBM: { type: Type.STRING, description: "Short client explanation in Bahasa Malaysia" },
-              structuringImprovements: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Specific structuring improvements" },
-              idealTenure: { type: Type.STRING, description: "Suggested ideal loan tenure" },
-              bankCategory: { type: Type.STRING, description: "Suitable bank category (Conservative, Moderate, Flexible)" }
-            },
-            required: [
-              "dsrMain", "dsrCombined", "netMonthlyIncomeMain", "stressTestInstallment", "isJointApplication", "riskGrade", "loanTypeSuitability", "approvalProbability", 
-              "riskFlags", "strategy", "requiredDocuments", "clientExplanationBM",
-              "structuringImprovements", "idealTenure", "bankCategory"
-            ]
+      // Retry logic for 503 errors
+      let attempts = 0;
+      let response: any;
+      while (attempts < 3) {
+        try {
+          response = await ai.models.generateContent({
+            model: "gemini-1.5-flash-latest",
+            contents: prompt,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  dsrMain: { type: Type.NUMBER, description: "Estimated DSR percentage for main borrower" },
+                  dsrJoint: { type: Type.NUMBER, description: "Estimated DSR percentage for joint borrower (if any)" },
+                  dsrCombined: { type: Type.NUMBER, description: "Combined DSR percentage" },
+                  netMonthlyIncomeMain: { type: Type.NUMBER, description: "Estimated Net Monthly Income for main borrower" },
+                  netMonthlyIncomeJoint: { type: Type.NUMBER, description: "Estimated Net Monthly Income for joint borrower" },
+                  stressTestInstallment: { type: Type.NUMBER, description: "Calculated installment using stress test rate (5.5%+)" },
+                  isJointApplication: { type: Type.BOOLEAN, description: "Whether it is a joint application" },
+                  riskGrade: { type: Type.STRING, description: "Risk Grade (A, B, or C)" },
+                  loanTypeSuitability: { type: Type.STRING, description: "Suitability analysis for loan types" },
+                  approvalProbability: { type: Type.NUMBER, description: "Approval probability percentage (0-100)" },
+                  riskFlags: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of identified risk flags" },
+                  strategy: { type: Type.STRING, description: "Risk mitigation and structuring strategy" },
+                  requiredDocuments: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of required supporting documents" },
+                  clientExplanationBM: { type: Type.STRING, description: "Short client explanation in Bahasa Malaysia" },
+                  structuringImprovements: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Specific structuring improvements" },
+                  idealTenure: { type: Type.STRING, description: "Suggested ideal loan tenure" },
+                  bankCategory: { type: Type.STRING, description: "Suitable bank category (Conservative, Moderate, Flexible)" }
+                },
+                required: [
+                  "dsrMain", "dsrCombined", "netMonthlyIncomeMain", "stressTestInstallment", "isJointApplication", "riskGrade", "loanTypeSuitability", "approvalProbability", 
+                  "riskFlags", "strategy", "requiredDocuments", "clientExplanationBM",
+                  "structuringImprovements", "idealTenure", "bankCategory"
+                ]
+              }
+            }
+          });
+          break; // Success!
+        } catch (err: any) {
+          attempts++;
+          if (err.message?.includes("503") || err.message?.includes("UNAVAILABLE")) {
+            console.log(`[GEMINI] 503 error, retrying attempt ${attempts}...`);
+            await new Promise(r => setTimeout(r, 2000 * attempts)); // Exponential backoff
+          } else {
+            throw err; // Rethrow other errors
           }
         }
-      });
+      }
 
       res.json(JSON.parse(response.text || "{}"));
     } catch (error: any) {
