@@ -247,6 +247,7 @@ async function startServer() {
     }
 
     try {
+      console.log(`[GEMINI] Starting analysis with key: ${geminiKey.substring(0, 4)}...${geminiKey.slice(-4)}`);
       const { GoogleGenAI, Type } = await import("@google/genai");
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       
@@ -283,7 +284,7 @@ async function startServer() {
       `;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",

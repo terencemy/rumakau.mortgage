@@ -26,7 +26,11 @@ export default function App() {
       setState('verifying');
     } catch (error: any) {
       console.error("Analysis failed:", error);
-      alert(`Analysis failed: ${error.message || "Please check your connection and try again."}`);
+      let msg = error.message || "Please check your connection and try again.";
+      if (msg.includes("API key not valid")) {
+        msg = "The AI service is reporting an invalid API key. Please ensure the 'Generative Language API' is enabled in your Google AI Studio settings for this key.";
+      }
+      alert(`Analysis failed: ${msg}`);
     } finally {
       setIsAnalyzing(false);
     }
