@@ -24,9 +24,9 @@ export default function App() {
       setAnalysisRequest(data);
       setAnalysisResult(result);
       setState('verifying');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Analysis failed:", error);
-      alert("Analysis failed. Please check your API key and try again.");
+      alert(`Analysis failed: ${error.message || "Please check your connection and try again."}`);
     } finally {
       setIsAnalyzing(false);
     }
