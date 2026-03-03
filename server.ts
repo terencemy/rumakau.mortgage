@@ -24,6 +24,20 @@ async function startServer() {
 
   app.use(express.json());
 
+  app.get("/api/verify/status", (req, res) => {
+    const resendKey = process.env.RESEND_API_KEY || "";
+    const twilioSid = process.env.TWILIO_ACCOUNT_SID || "";
+    const twilioToken = process.env.TWILIO_AUTH_TOKEN || "";
+    const twilioNumber = process.env.TWILIO_WHATSAPP_NUMBER || "";
+    
+    res.json({ 
+      hasResend: !!resendKey,
+      resendPreview: resendKey ? `${resendKey.substring(0, 4)}...` : null,
+      hasTwilio: !!(twilioSid && twilioToken && twilioNumber),
+      twilioPreview: twilioSid ? `${twilioSid.substring(0, 4)}...` : null
+    });
+  });
+
   // Mock Verification API
   const otps = new Map<string, string>();
 
@@ -41,20 +55,18 @@ async function startServer() {
     io.emit("otp_sent", { contactValue: normalizedValue, code, contactType });
     
     // 2. Attempt Real Email Delivery if Resend is configured
-    console.log(`[DEBUG] Checking RESEND_API_KEY: ${process.env.RESEND_API_KEY ? 'Present' : 'Missing'}`);
     if (contactType === 'email' && process.env.RESEND_API_KEY) {
       try {
-        console.log(`[DEBUG] Attempting to send real email to ${normalizedValue}...`);
         const { Resend } = await import('resend');
         const resend = new Resend(process.env.RESEND_API_KEY);
         const { data, error } = await resend.emails.send({
           from: 'onboarding@resend.dev',
           to: normalizedValue,
-          subject: 'Your Verification Code - MortgageRisk AI',
+          subject: 'Your Verification Code - Rumakau.com',
           html: `
             <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
               <h2 style="color: #0f172a;">Security Verification</h2>
-              <p>Your verification code for MortgageRisk AI is:</p>
+              <p>Your verification code for Rumakau.com is:</p>
               <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #059669; margin: 20px 0;">
                 ${code}
               </div>
@@ -65,11 +77,39 @@ async function startServer() {
         
         if (error) {
           console.error("[RESEND ERROR]", error);
-        } else {
-          console.log(`[RESEND SUCCESS] Email sent. ID: ${data?.id}`);
+          return res.status(500).json({ 
+            success: false, 
+            error: `Email service error: ${error.message || 'Unknown error'}.` 
+          });
         }
-      } catch (error) {
-        console.error("[RESEND EXCEPTION] Failed to send real email:", error);
+      } catch (error: any) {
+        console.error("[RESEND EXCEPTION]", error);
+        return res.status(500).json({ success: false, error: `Server exception: ${error.message}` });
+      }
+    }
+
+    // 3. Attempt Real WhatsApp Delivery if Twilio is configured
+    if (contactType === 'whatsapp' && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_NUMBER) {
+      try {
+        const twilio = await import('twilio');
+        const client = twilio.default(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        
+        // Ensure the number is in WhatsApp format for Twilio
+        const to = normalizedValue.startsWith('whatsapp:') ? normalizedValue : `whatsapp:${normalizedValue}`;
+        
+        await client.messages.create({
+          from: process.env.TWILIO_WHATSAPP_NUMBER,
+          to: to,
+          body: `Your Rumakau.com verification code is: ${code}. Do not share this code with anyone.`
+        });
+        
+        console.log(`[TWILIO SUCCESS] WhatsApp sent to ${to}`);
+      } catch (error: any) {
+        console.error("[TWILIO ERROR]", error);
+        return res.status(500).json({ 
+          success: false, 
+          error: `WhatsApp service error: ${error.message}. Please check your Twilio credentials.` 
+        });
       }
     }
     

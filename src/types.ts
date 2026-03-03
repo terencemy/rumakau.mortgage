@@ -60,6 +60,9 @@ export interface MortgageAnalysisResult {
   dsrMain: number;
   dsrJoint?: number;
   dsrCombined: number;
+  netMonthlyIncomeMain: number;
+  netMonthlyIncomeJoint?: number;
+  stressTestInstallment: number;
   isJointApplication: boolean;
   riskGrade: 'A' | 'B' | 'C';
   loanTypeSuitability: string;

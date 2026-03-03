@@ -9,10 +9,13 @@ import {
   ArrowRight,
   AlertTriangle,
   CheckCircle2,
-  Clock
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { MortgageAnalysisResult } from '../types';
+
+import { downloadBNMGuidelines } from '../utils/pdfGenerator';
 
 interface Props {
   result: MortgageAnalysisResult;
@@ -114,6 +117,37 @@ export const AnalysisDashboard: React.FC<Props> = ({ result, onReset }) => {
         </motion.div>
       </div>
 
+      {/* BNM Calculation Breakdown */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="glass-panel rounded-2xl p-8 border-t-4 border-t-emerald-500"
+      >
+        <div className="flex items-center gap-2 mb-6">
+          <ShieldCheck className="text-emerald-600" size={20} />
+          <h3 className="font-bold text-slate-800 uppercase tracking-widest text-xs">BNM Regulation Compliance Breakdown</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="space-y-1">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Net Monthly Income (Main)</div>
+            <div className="text-2xl font-mono font-bold text-slate-800">RM {result.netMonthlyIncomeMain.toLocaleString()}</div>
+            <div className="text-[10px] text-slate-400 italic">After statutory deductions (EPF/SOCSO/PCB)</div>
+          </div>
+          {result.isJointApplication && result.netMonthlyIncomeJoint && (
+            <div className="space-y-1">
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Net Monthly Income (Joint)</div>
+              <div className="text-2xl font-mono font-bold text-slate-800">RM {result.netMonthlyIncomeJoint.toLocaleString()}</div>
+              <div className="text-[10px] text-slate-400 italic">After statutory deductions (EPF/SOCSO/PCB)</div>
+            </div>
+          )}
+          <div className="space-y-1">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stress Test Installment</div>
+            <div className="text-2xl font-mono font-bold text-emerald-600">RM {result.stressTestInstallment.toLocaleString()}</div>
+            <div className="text-[10px] text-slate-400 italic">Calculated at 5.5% - 6.0% Stress Rate</div>
+          </div>
+        </div>
+      </motion.div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Analysis */}
         <div className="lg:col-span-2 space-y-8">
@@ -211,10 +245,21 @@ export const AnalysisDashboard: React.FC<Props> = ({ result, onReset }) => {
                 </div>
               ))}
             </div>
+
+            <div className="mt-8 pt-8 border-t border-slate-100">
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Compliance Resources</h4>
+              <button
+                onClick={downloadBNMGuidelines}
+                className="w-full flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 py-3 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100 group"
+              >
+                <FileCheck size={16} />
+                Download BNM Guidelines PDF
+              </button>
+            </div>
             
             <button
               onClick={onReset}
-              className="w-full mt-12 flex items-center justify-center gap-2 bg-slate-800 text-white py-3 rounded-xl text-sm font-bold hover:bg-slate-900 transition-all shadow-md group no-print"
+              className="w-full mt-6 flex items-center justify-center gap-2 bg-slate-800 text-white py-3 rounded-xl text-sm font-bold hover:bg-slate-900 transition-all shadow-md group no-print"
             >
               Start New Analysis
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />

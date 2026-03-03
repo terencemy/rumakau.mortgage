@@ -17,6 +17,24 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveNotification, setLiveNotification] = useState<{ code: string, type: string } | null>(null);
+  const [apiStatus, setApiStatus] = useState<{ 
+    resend: { status: 'ready' | 'missing', preview?: string },
+    twilio: { status: 'ready' | 'missing', preview?: string }
+  }>({ 
+    resend: { status: 'missing' }, 
+    twilio: { status: 'missing' } 
+  });
+
+  useEffect(() => {
+    // Check if API is configured on mount
+    fetch('/api/verify/status')
+      .then(res => res.json())
+      .then(data => setApiStatus({ 
+        resend: { status: data.hasResend ? 'ready' : 'missing', preview: data.resendPreview },
+        twilio: { status: data.hasTwilio ? 'ready' : 'missing', preview: data.twilioPreview }
+      }))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const socket = io();
@@ -60,8 +78,10 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to send code');
       
-      setStep('otp');
-      setTimer(60);
+      if (data.success) {
+        setStep('otp');
+        setTimer(60);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -148,6 +168,33 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
           <p className="text-sm text-slate-500 mt-2">
             To comply with BNM security standards, please verify your identity before viewing the risk report.
           </p>
+          
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <div className="flex gap-2">
+              {apiStatus.resend.status === 'ready' ? (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-600 uppercase tracking-wider border border-emerald-100">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Email Active ({apiStatus.resend.preview})
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border border-slate-100">
+                  Email Simulated
+                </div>
+              )}
+              
+              {apiStatus.twilio.status === 'ready' ? (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-600 uppercase tracking-wider border border-emerald-100">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  WhatsApp Active ({apiStatus.twilio.preview})
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border border-slate-100">
+                  WhatsApp Simulated
+                </div>
+              )}
+            </div>
+          </div>
+
           {error && (
             <div className="mt-4 p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs font-bold text-rose-600">
               {error}
@@ -215,17 +262,17 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                     <button
                       type="button"
                       onClick={async () => {
-                        if (!value) return alert("Please enter an email first");
+                        if (!value) return alert(`Please enter ${method === 'email' ? 'an email' : 'a WhatsApp number'} first`);
                         setIsVerifying(true);
                         try {
                           const response = await fetch('/api/verify/send', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contactType: 'email', contactValue: value }),
+                            body: JSON.stringify({ contactType: method, contactValue: value }),
                           });
                           const data = await response.json();
-                          if (response.ok) alert("Test email sent! Check your inbox.");
-                          else throw new Error(data.error);
+                          if (response.ok && data.success) alert(`Test ${method} sent! Check your ${method === 'email' ? 'inbox' : 'WhatsApp'}.`);
+                          else throw new Error(data.error || "Unknown error");
                         } catch (err: any) {
                           alert("Test failed: " + err.message);
                         } finally {
@@ -234,7 +281,7 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                       }}
                       className="w-full py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition-colors"
                     >
-                      Send Test Email Only
+                      Send Test {method === 'email' ? 'Email' : 'WhatsApp'} Only
                     </button>
                   </div>
                 </form>

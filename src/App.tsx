@@ -7,6 +7,8 @@ import { MortgageAnalysisRequest, MortgageAnalysisResult } from './types';
 import { ShieldCheck, Calculator, FileText, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
+import { downloadBNMGuidelines } from './utils/pdfGenerator';
+
 type AppState = 'form' | 'verifying' | 'dashboard';
 
 export default function App() {
@@ -78,10 +80,13 @@ export default function App() {
               <Calculator size={14} />
               DSR Calculator
             </div>
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+            <button 
+              onClick={downloadBNMGuidelines}
+              className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
+            >
               <FileText size={14} />
               Policy Check
-            </div>
+            </button>
           </div>
         </div>
       </nav>
@@ -169,6 +174,7 @@ export default function App() {
             © 2026 Rumakau.com For professional use only. Data processed session-based.
           </p>
           <div className="flex gap-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
+            <button onClick={downloadBNMGuidelines} className="hover:text-slate-900 transition-colors">BNM Guidelines</button>
             <a href="#" className="hover:text-slate-900 transition-colors">Privacy</a>
             <a href="#" className="hover:text-slate-900 transition-colors">Terms</a>
             <a href="#" className="hover:text-slate-900 transition-colors">Support</a>
