@@ -1,0 +1,328 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Mail, MessageSquare, ShieldCheck, ArrowRight, RefreshCw, CheckCircle2, Bell } from 'lucide-react';
+import { io } from 'socket.io-client';
+
+interface Props {
+  onVerified: (contactInfo: { type: 'email' | 'whatsapp', value: string }) => void;
+  isProcessing: boolean;
+}
+
+export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) => {
+  const [method, setMethod] = useState<'email' | 'whatsapp' | null>(null);
+  const [value, setValue] = useState('');
+  const [step, setStep] = useState<'input' | 'otp'>('input');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [timer, setTimer] = useState(60);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [liveNotification, setLiveNotification] = useState<{ code: string, type: string } | null>(null);
+
+  useEffect(() => {
+    const socket = io();
+    
+    socket.on('otp_sent', (data: { contactValue: string, code: string, contactType: string }) => {
+      const normalizedInput = value.trim().toLowerCase();
+      if (data.contactValue === normalizedInput) {
+        setLiveNotification({ code: data.code, type: data.contactType });
+        // Auto-clear notification after 10 seconds
+        setTimeout(() => setLiveNotification(null), 10000);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [value]);
+
+  useEffect(() => {
+    let interval: any;
+    if (step === 'otp' && timer > 0) {
+      interval = setInterval(() => setTimer(t => t - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [step, timer]);
+
+  const handleSendCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!value || !method) return;
+    
+    setError(null);
+    setIsVerifying(true);
+    
+    try {
+      const response = await fetch('/api/verify/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactType: method, contactValue: value }),
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to send code');
+      
+      setStep('otp');
+      setTimer(60);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleOtpChange = (index: number, val: string) => {
+    if (isNaN(Number(val))) return;
+    const newOtp = [...otp];
+    newOtp[index] = val.slice(-1);
+    setOtp(newOtp);
+
+    // Auto-focus next input
+    if (val && index < 5) {
+      const nextInput = document.getElementById(`otp-${index + 1}`);
+      nextInput?.focus();
+    }
+  };
+
+  const handleVerify = async () => {
+    if (!method || !value) return;
+    
+    setError(null);
+    setIsVerifying(true);
+    
+    try {
+      const response = await fetch('/api/verify/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactValue: value, code: otp.join('') }),
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Invalid code');
+      
+      onVerified({ type: method, value });
+    } catch (err: any) {
+      setError(err.message);
+      setOtp(['', '', '', '', '', '']);
+      document.getElementById('otp-0')?.focus();
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const isOtpComplete = otp.every(digit => digit !== '');
+
+  return (
+    <div className="max-w-md mx-auto relative">
+      <AnimatePresence>
+        {liveNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            className="absolute -top-24 left-0 right-0 z-50"
+          >
+            <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-4">
+              <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center shrink-0 animate-pulse">
+                <Bell size={20} />
+              </div>
+              <div className="flex-grow">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Incoming {liveNotification.type} Code</p>
+                <p className="text-lg font-mono font-bold tracking-[0.5em]">{liveNotification.code}</p>
+              </div>
+              <button 
+                onClick={() => setLiveNotification(null)}
+                className="text-white/40 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="glass-panel rounded-3xl p-8 shadow-xl border-emerald-100">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl mb-4 shadow-inner">
+            <ShieldCheck size={32} />
+          </div>
+          <h2 className="text-2xl font-serif italic text-slate-900">Security Verification</h2>
+          <p className="text-sm text-slate-500 mt-2">
+            To comply with BNM security standards, please verify your identity before viewing the risk report.
+          </p>
+          {error && (
+            <div className="mt-4 p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs font-bold text-rose-600">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <AnimatePresence mode="wait">
+          {step === 'input' ? (
+            <motion.div
+              key="input"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setMethod('email')}
+                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
+                    method === 'email' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
+                  }`}
+                >
+                  <Mail size={24} />
+                  <span className="text-xs font-bold uppercase tracking-wider">Email</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMethod('whatsapp')}
+                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
+                    method === 'whatsapp' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
+                  }`}
+                >
+                  <MessageSquare size={24} />
+                  <span className="text-xs font-bold uppercase tracking-wider">WhatsApp</span>
+                </button>
+              </div>
+
+              {method && (
+                <form onSubmit={handleSendCode} className="space-y-4">
+                  <div>
+                    <label className="label-text">
+                      {method === 'email' ? 'Email Address' : 'WhatsApp Number'}
+                    </label>
+                    <input
+                      type={method === 'email' ? 'email' : 'tel'}
+                      required
+                      placeholder={method === 'email' ? 'name@example.com' : '+60123456789'}
+                      className="input-field"
+                      value={value}
+                      onChange={e => setValue(e.target.value)}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold text-sm hover:bg-slate-900 transition-all flex items-center justify-center gap-2 group"
+                  >
+                    Send Verification Code
+                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+                  
+                  {/* Debug Button */}
+                  <div className="pt-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!value) return alert("Please enter an email first");
+                        setIsVerifying(true);
+                        try {
+                          const response = await fetch('/api/verify/send', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contactType: 'email', contactValue: value }),
+                          });
+                          const data = await response.json();
+                          if (response.ok) alert("Test email sent! Check your inbox.");
+                          else throw new Error(data.error);
+                        } catch (err: any) {
+                          alert("Test failed: " + err.message);
+                        } finally {
+                          setIsVerifying(false);
+                        }
+                      }}
+                      className="w-full py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition-colors"
+                    >
+                      Send Test Email Only
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="otp"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-8"
+            >
+              <div className="text-center">
+                <p className="text-sm text-slate-600">
+                  We've sent a 6-digit code to <br />
+                  <span className="font-bold text-slate-900">{value}</span>
+                </p>
+                <button 
+                  onClick={() => setStep('input')}
+                  className="text-xs font-bold text-emerald-600 mt-2 hover:underline"
+                >
+                  Change {method === 'email' ? 'email' : 'number'}
+                </button>
+              </div>
+
+              <div className="flex justify-between gap-2">
+                {otp.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    id={`otp-${idx}`}
+                    type="text"
+                    maxLength={1}
+                    className="w-12 h-14 text-center text-xl font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
+                    value={digit}
+                    onChange={e => handleOtpChange(idx, e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Backspace' && !digit && idx > 0) {
+                        document.getElementById(`otp-${idx - 1}`)?.focus();
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+
+              <div className="space-y-4">
+                <button
+                  onClick={handleVerify}
+                  disabled={!isOtpComplete || isVerifying}
+                  className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isVerifying ? (
+                    <>
+                      <RefreshCw size={18} className="animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      Verify & View Report
+                      <CheckCircle2 size={18} />
+                    </>
+                  )}
+                </button>
+
+                <div className="text-center">
+                  {timer > 0 ? (
+                    <p className="text-xs text-slate-400">
+                      Resend code in <span className="font-bold">{timer}s</span>
+                    </p>
+                  ) : (
+                    <button 
+                      onClick={handleSendCode}
+                      className="text-xs font-bold text-emerald-600 hover:underline"
+                    >
+                      Resend Code
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      
+      <div className="mt-6 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <ShieldCheck size={12} className="text-emerald-500" />
+        Secure Session • No Data Stored
+      </div>
+    </div>
+  );
+};
