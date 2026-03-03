@@ -88,34 +88,33 @@ async function startServer() {
     const fallbackKey = "AIzaSyDgmn2993iMD45j1LfJ6n1fEVGxjITyA2A";
     const geminiKey = envKey || fallbackKey;
 
+    const results: any[] = [];
+    const modelsToTest = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro"];
+
     try {
       const { GoogleGenAI } = await import("@google/genai");
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       
-      let attempts = 0;
-      let response: any;
-      while (attempts < 3) {
+      for (const modelName of modelsToTest) {
         try {
-          response = await ai.models.generateContent({
-            model: "gemini-1.5-flash-latest",
-            contents: "Say 'Connection Successful'",
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: "Say 'OK'",
           });
-          break;
+          results.push({ model: modelName, success: true, message: response.text });
         } catch (err: any) {
-          attempts++;
-          if (err.message?.includes("503") || err.message?.includes("UNAVAILABLE")) {
-            await new Promise(r => setTimeout(r, 1000 * attempts));
-          } else {
-            throw err;
-          }
+          results.push({ model: modelName, success: false, error: err.message });
         }
       }
-      res.json({ success: true, message: response.text });
+      
+      res.json({ 
+        keyPreview: `${geminiKey.substring(0, 6)}...${geminiKey.slice(-4)}`,
+        results 
+      });
     } catch (error: any) {
       res.status(500).json({ 
         success: false, 
-        error: error.message,
-        details: error.response?.data || "No additional details"
+        error: error.message
       });
     }
   });
