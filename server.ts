@@ -60,6 +60,7 @@ async function startServer() {
     
     // Check environment variable first, then fallback
     const envGeminiKey = (process.env.GEMINI_API_KEY || "").trim();
+    // Corrected fallback based on visual inspection of screenshot (using 'I' instead of 'l')
     const fallbackKey = "AIzaSyDgmn2993iMD45j1LfJ6n1fEVGxjITyA2A";
     const geminiKey = envGeminiKey || fallbackKey;
     const isUsingFallback = !envGeminiKey;
@@ -73,11 +74,35 @@ async function startServer() {
       twilioNumberLength: twilioNumber.length,
       twilioPreview: twilioSid ? `${twilioSid.substring(0, 4)}...` : null,
       hasGemini: !!geminiKey,
-      geminiPreview: geminiKey ? `${geminiKey.substring(0, 8)}...${geminiKey.slice(-4)}` : null,
+      geminiFullPreview: geminiKey ? `${geminiKey.substring(0, 10)}...${geminiKey.slice(-10)}` : null,
       isUsingFallback,
       dbStatus: !!db ? "Connected" : "Error",
-      envKeyLength: envGeminiKey.length
+      envKeyLength: envGeminiKey.length,
+      tip: "If geminiFullPreview doesn't match your Google AI Studio key exactly, update your Render Environment Variables."
     });
+  });
+
+  // Test Gemini API connection
+  app.get("/api/admin/test-ai", async (req, res) => {
+    const envKey = (process.env.GEMINI_API_KEY || "").trim();
+    const fallbackKey = "AIzaSyDgmn2993iMD45j1LfJ6n1fEVGxjITyA2A";
+    const geminiKey = envKey || fallbackKey;
+
+    try {
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: "Say 'Connection Successful'",
+      });
+      res.json({ success: true, message: response.text });
+    } catch (error: any) {
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        details: error.response?.data || "No additional details"
+      });
+    }
   });
 
   // Mock Verification API
