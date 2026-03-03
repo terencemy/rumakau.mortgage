@@ -68,7 +68,7 @@ export default function App() {
               <ShieldCheck className="text-emerald-400" size={20} />
             </div>
             <div>
-              <h1 className="text-sm font-bold tracking-tight text-slate-900">MortgageRisk AI</h1>
+              <h1 className="text-sm font-bold tracking-tight text-slate-900">Rumakau.com</h1>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Risk & Structuring Engine</p>
             </div>
           </div>
@@ -166,7 +166,7 @@ export default function App() {
             <span className="text-xs font-bold uppercase tracking-widest">Bank-Grade Security</span>
           </div>
           <p className="text-xs text-slate-400 font-medium">
-            © 2026 MortgageRisk AI. For professional use only. Data processed session-based.
+            © 2026 Rumakau.com For professional use only. Data processed session-based.
           </p>
           <div className="flex gap-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
             <a href="#" className="hover:text-slate-900 transition-colors">Privacy</a>
