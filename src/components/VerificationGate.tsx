@@ -16,7 +16,6 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
   const [timer, setTimer] = useState(60);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [liveNotification, setLiveNotification] = useState<{ code: string, type: string } | null>(null);
   const [apiStatus, setApiStatus] = useState<{ 
     resend: { status: 'ready' | 'missing', preview?: string },
     twilio: { status: 'ready' | 'missing', preview?: string }
@@ -35,36 +34,6 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
       }))
       .catch(() => {});
   }, []);
-
-  useEffect(() => {
-    const socket = io({
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5
-    });
-    
-    socket.on('otp_sent', (data: { contactValue: string, code: string, contactType: string }) => {
-      // Clean current input for comparison to match server logic
-      let normalizedInput = value.trim().toLowerCase();
-      if (method === 'whatsapp') {
-        normalizedInput = normalizedInput.replace(/[\s\-\(\)]/g, '');
-        if (/^\d+$/.test(normalizedInput) && !normalizedInput.startsWith('+')) {
-          if (normalizedInput.startsWith('01')) normalizedInput = '+6' + normalizedInput;
-          else if (normalizedInput.startsWith('60')) normalizedInput = '+' + normalizedInput;
-          else normalizedInput = '+' + normalizedInput;
-        }
-      }
-
-      if (data.contactValue === normalizedInput) {
-        setLiveNotification({ code: data.code, type: data.contactType });
-        // Auto-clear notification after 15 seconds
-        setTimeout(() => setLiveNotification(null), 15000);
-      }
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [value, method]);
 
   useEffect(() => {
     let interval: any;
@@ -145,33 +114,6 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
 
   return (
     <div className="max-w-md mx-auto relative">
-      <AnimatePresence>
-        {liveNotification && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="absolute -top-24 left-0 right-0 z-50"
-          >
-            <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-4">
-              <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center shrink-0 animate-pulse">
-                <Bell size={20} />
-              </div>
-              <div className="flex-grow">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Incoming {liveNotification.type} Code</p>
-                <p className="text-lg font-mono font-bold tracking-[0.5em]">{liveNotification.code}</p>
-              </div>
-              <button 
-                onClick={() => setLiveNotification(null)}
-                className="text-white/40 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <div className="glass-panel rounded-3xl p-8 shadow-xl border-emerald-100">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl mb-4 shadow-inner">
@@ -370,11 +312,6 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                       <p className="text-xs text-slate-400">
                         Resend code in <span className="font-bold">{timer}s</span>
                       </p>
-                      {timer < 45 && (
-                        <p className="text-[10px] text-slate-400 italic">
-                          Code not arriving? Check your {method === 'email' ? 'Spam folder' : 'WhatsApp connectivity'}.
-                        </p>
-                      )}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -384,23 +321,6 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                       >
                         Resend Code
                       </button>
-                      <div className="pt-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Emergency bypass for demo purposes if code really doesn't arrive
-                            const bypass = confirm("Code still not arriving? For this demo, would you like to see the code here in the browser?");
-                            if (bypass) {
-                              // We can't easily get the code from the server without another API call,
-                              // but we can tell them to check the 'Incoming Code' notification which should have appeared
-                              alert("Please look for the black notification bar at the top of this verification box. It contains your code for testing purposes.");
-                            }
-                          }}
-                          className="text-[9px] text-slate-300 uppercase tracking-widest hover:text-slate-500"
-                        >
-                          Troubleshoot Verification
-                        </button>
-                      </div>
                     </div>
                   )}
                 </div>

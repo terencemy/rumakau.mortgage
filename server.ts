@@ -203,31 +203,40 @@ async function startServer() {
     }
 
     // 3. Attempt Real WhatsApp Delivery if Twilio is configured
-    if (contactType === 'whatsapp' && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_NUMBER) {
-      try {
-        const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        
-        // Ensure the 'to' number is in WhatsApp format for Twilio
-        const formattedTo = normalizedValue.startsWith('whatsapp:') ? normalizedValue : `whatsapp:${normalizedValue}`;
-        
-        // Ensure the 'from' number is in WhatsApp format
-        const from = process.env.TWILIO_WHATSAPP_NUMBER.startsWith('whatsapp:') 
-          ? process.env.TWILIO_WHATSAPP_NUMBER 
-          : `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`;
-        
-        console.log(`[TWILIO] Sending WhatsApp from ${from} to ${formattedTo}`);
-        
-        await client.messages.create({
-          from: from,
-          to: formattedTo,
-          body: `Your Rumakau.com verification code is: ${code}. Do not share this code with anyone.`
+    if (contactType === 'whatsapp') {
+      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_NUMBER) {
+        try {
+          const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          
+          // Ensure the 'to' number is in WhatsApp format for Twilio
+          const formattedTo = normalizedValue.startsWith('whatsapp:') ? normalizedValue : `whatsapp:${normalizedValue}`;
+          
+          // Ensure the 'from' number is in WhatsApp format
+          const from = process.env.TWILIO_WHATSAPP_NUMBER.startsWith('whatsapp:') 
+            ? process.env.TWILIO_WHATSAPP_NUMBER 
+            : `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`;
+          
+          console.log(`[TWILIO] Sending WhatsApp from ${from} to ${formattedTo}`);
+          
+          await client.messages.create({
+            from: from,
+            to: formattedTo,
+            body: `Your Rumakau.com verification code is: ${code}. Do not share this code with anyone.`
+          });
+          
+          console.log(`[TWILIO SUCCESS] WhatsApp sent to ${formattedTo}`);
+        } catch (error: any) {
+          console.error("[TWILIO ERROR]", error);
+          return res.status(500).json({ 
+            success: false, 
+            error: `WhatsApp error: ${error.message}. If using Twilio Sandbox, ensure you have joined the sandbox by sending 'join [keyword]' to ${process.env.TWILIO_WHATSAPP_NUMBER}.` 
+          });
+        }
+      } else {
+        return res.status(400).json({ 
+          success: false, 
+          error: "WhatsApp service not configured. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_NUMBER in environment variables." 
         });
-        
-        console.log(`[TWILIO SUCCESS] WhatsApp sent to ${formattedTo}`);
-      } catch (error: any) {
-        console.error("[TWILIO ERROR]", error);
-        // We don't return 500 here to allow the socket.io fallback to work for the user
-        // but we log it clearly.
       }
     }
     
