@@ -1,0 +1,21 @@
+{
+  "name": "Rumakau Mortgage AI",
+  "short_name": "Rumakau",
+  "description": "Malaysia Mortgage Risk & Structuring AI Engine",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0F172A",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/mortgage/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/mortgage/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

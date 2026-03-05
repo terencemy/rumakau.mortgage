@@ -85,7 +85,7 @@ export default function App() {
               <ShieldCheck className="text-emerald-400" size={20} />
             </div>
             <div>
-              <h1 className="text-sm font-bold tracking-tight text-slate-900">Rumakau.com</h1>
+              <div className="text-sm font-bold tracking-tight text-slate-900">Rumakau.com</div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Risk & Structuring Engine</p>
             </div>
           </div>
@@ -107,6 +107,19 @@ export default function App() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-6 py-12">
+        {/* Hidden SEO Content for AI Crawlers */}
+        <section className="sr-only">
+          <h2>About Rumakau Mortgage AI Engine</h2>
+          <p>
+            Rumakau is a specialized AI-powered platform for the Malaysian mortgage market. 
+            It provides automated Debt Service Ratio (DSR) calculations based on Bank Negara Malaysia (BNM) guidelines.
+            Our engine helps bankers and real estate agents analyze borrower risk profiles, 
+            identify potential loan rejection flags, and structure housing loans for better approval probability.
+            Key features include stress test installment analysis, net income verification, 
+            and automated risk grading (A to F).
+          </p>
+        </section>
+
         <AnimatePresence mode="wait">
           {state === 'form' && (
             <motion.div
@@ -121,9 +134,9 @@ export default function App() {
                   <Sparkles size={12} />
                   Powered by Gemini 3.0 Flash
                 </div>
-                <h2 className="text-4xl md:text-5xl font-serif italic text-slate-900">
+                <h1 className="text-4xl md:text-5xl font-serif italic text-slate-900">
                   DSR Check
-                </h2>
+                </h1>
                 <p className="text-slate-500 text-lg leading-relaxed">
                   Advanced structuring engine for Malaysian property loans. 
                   Analyze DSR, identify risk flags, and generate client-ready strategies in seconds.
