@@ -200,17 +200,48 @@ async function startServer() {
         
         console.log(`[TWILIO VERIFY] Sending ${channel} to ${normalizedValue}`);
         
-        const verification = await client.verify.v2.services(verifyServiceSid)
-          .verifications
-          .create({ to: normalizedValue, channel: channel });
-        
-        console.log(`[TWILIO VERIFY SUCCESS] SID: ${verification.sid}, Status: ${verification.status}`);
-        return res.json({ success: true, message: "Verification code sent via Twilio Verify" });
+        try {
+          const verification = await client.verify.v2.services(verifyServiceSid)
+            .verifications
+            .create({ to: normalizedValue, channel: channel });
+          
+          console.log(`[TWILIO VERIFY SUCCESS] SID: ${verification.sid}, Status: ${verification.status}`);
+          return res.json({ success: true, message: "Verification code sent via Twilio Verify" });
+        } catch (verifyErr: any) {
+          // Fallback to manual OTP if WhatsApp channel is disabled in Verify
+          if (contactType === 'whatsapp' && (verifyErr.message.includes('disabled') || verifyErr.code === 60225)) {
+            console.warn("[TWILIO VERIFY FALLBACK] WhatsApp channel disabled in Verify, falling back to Messaging API");
+            
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            otps.set(normalizedValue, code);
+            
+            const rawFrom = (process.env.TWILIO_WHATSAPP_NUMBER || "").trim();
+            if (!rawFrom) throw new Error("TWILIO_WHATSAPP_NUMBER not configured for fallback");
+
+            let from = rawFrom;
+            if (!from.startsWith('whatsapp:')) {
+              if (!from.startsWith('+') && /^\d+$/.test(from)) from = '+' + from;
+              from = `whatsapp:${from}`;
+            }
+            
+            const formattedTo = normalizedValue.startsWith('whatsapp:') ? normalizedValue : `whatsapp:${normalizedValue}`;
+            
+            await client.messages.create({
+              from: from,
+              to: formattedTo,
+              body: `Your Rumakau.com verification code is: ${code}. Do not share this code with anyone.`
+            });
+            
+            io.emit("otp_sent", { contactValue: normalizedValue, code, contactType });
+            return res.json({ success: true, message: "Sent via Messaging API (Verify fallback)" });
+          }
+          throw verifyErr;
+        }
       } catch (error: any) {
-        console.error("[TWILIO VERIFY ERROR]", error);
+        console.error("[TWILIO ERROR]", error);
         return res.status(500).json({ 
           success: false, 
-          error: `Twilio Verify error: ${error.message}.` 
+          error: `Twilio error: ${error.message}.` 
         });
       }
     }
