@@ -66,6 +66,7 @@ async function startServer() {
     const twilioSid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
     const twilioToken = (process.env.TWILIO_AUTH_TOKEN || "").trim();
     const twilioNumber = (process.env.TWILIO_WHATSAPP_NUMBER || "").trim();
+    const verifyServiceSid = (process.env.TWILIO_VERIFY_SERVICE_SID || "VA93662e4b7bf8e346e5c860c24f6c75bd").trim();
     
     // Check environment variable first, then fallback
     const envGeminiKey = (process.env.GEMINI_API_KEY || "").trim();
@@ -76,7 +77,9 @@ async function startServer() {
     res.json({ 
       hasResend: !!resendKey,
       resendPreview: resendKey ? `${resendKey.substring(0, 4)}...` : null,
-      hasTwilio: !!(twilioSid && twilioToken && twilioNumber),
+      hasTwilio: !!(twilioSid && twilioToken),
+      hasTwilioVerify: !!verifyServiceSid,
+      verifyServiceSidPreview: verifyServiceSid ? `${verifyServiceSid.substring(0, 8)}...` : null,
       twilioSidLength: twilioSid.length,
       twilioTokenLength: twilioToken.length,
       twilioNumberLength: twilioNumber.length,
@@ -175,18 +178,44 @@ async function startServer() {
     
     let normalizedValue = contactValue.trim().toLowerCase();
     
-    // Clean phone numbers for WhatsApp: remove spaces, dashes, parentheses
-    if (contactType === 'whatsapp') {
+    // Clean phone numbers for WhatsApp/SMS
+    if (contactType === 'whatsapp' || contactType === 'sms') {
       normalizedValue = normalizedValue.replace(/[\s\-\(\)]/g, '');
-      // Ensure it starts with + if it's a number
       if (/^\d+$/.test(normalizedValue) && !normalizedValue.startsWith('+')) {
-        // Default to Malaysia (+6) if it starts with 01 or 60
         if (normalizedValue.startsWith('01')) normalizedValue = '+6' + normalizedValue;
         else if (normalizedValue.startsWith('60')) normalizedValue = '+' + normalizedValue;
-        else normalizedValue = '+' + normalizedValue; // Generic fallback
+        else normalizedValue = '+' + normalizedValue;
       }
     }
     
+    // 1. Try Twilio Verify if configured
+    const sid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
+    const token = (process.env.TWILIO_AUTH_TOKEN || "").trim();
+    const verifyServiceSid = (process.env.TWILIO_VERIFY_SERVICE_SID || "VA93662e4b7bf8e346e5c860c24f6c75bd").trim();
+
+    if (sid && token && (contactType === 'whatsapp' || contactType === 'sms')) {
+      try {
+        const client = twilio(sid, token);
+        const channel = contactType === 'whatsapp' ? 'whatsapp' : 'sms';
+        
+        console.log(`[TWILIO VERIFY] Sending ${channel} to ${normalizedValue}`);
+        
+        const verification = await client.verify.v2.services(verifyServiceSid)
+          .verifications
+          .create({ to: normalizedValue, channel: channel });
+        
+        console.log(`[TWILIO VERIFY SUCCESS] SID: ${verification.sid}, Status: ${verification.status}`);
+        return res.json({ success: true, message: "Verification code sent via Twilio Verify" });
+      } catch (error: any) {
+        console.error("[TWILIO VERIFY ERROR]", error);
+        return res.status(500).json({ 
+          success: false, 
+          error: `Twilio Verify error: ${error.message}.` 
+        });
+      }
+    }
+
+    // Fallback to manual OTP for Email or if Twilio not configured
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     otps.set(normalizedValue, code);
     
@@ -228,58 +257,52 @@ async function startServer() {
       }
     }
 
-    // 3. Attempt Real WhatsApp Delivery if Twilio is configured
-    if (contactType === 'whatsapp') {
-      const sid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
-      const token = (process.env.TWILIO_AUTH_TOKEN || "").trim();
-      const rawFrom = (process.env.TWILIO_WHATSAPP_NUMBER || "").trim();
-
-      if (sid && token && rawFrom) {
-        try {
-          const client = twilio(sid, token);
-          
-          // Ensure the 'to' number is in WhatsApp format for Twilio
-          const formattedTo = normalizedValue.startsWith('whatsapp:') ? normalizedValue : `whatsapp:${normalizedValue}`;
-          
-          // Ensure the 'from' number is in WhatsApp format and has a +
-          let from = rawFrom;
-          if (!from.startsWith('whatsapp:')) {
-            if (!from.startsWith('+') && /^\d+$/.test(from)) from = '+' + from;
-            from = `whatsapp:${from}`;
-          }
-          
-          console.log(`[TWILIO] Sending WhatsApp: From=${from}, To=${formattedTo}`);
-          
-          const message = await client.messages.create({
-            from: from,
-            to: formattedTo,
-            body: `Your Rumakau.com verification code is: ${code}. Do not share this code with anyone.`
-          });
-          
-          console.log(`[TWILIO SUCCESS] SID: ${message.sid}, Status: ${message.status}`);
-        } catch (error: any) {
-          console.error("[TWILIO ERROR]", error);
-          return res.status(500).json({ 
-            success: false, 
-            error: `WhatsApp error: ${error.message}. (From: ${rawFrom}). If using Twilio Sandbox, ensure you have joined by sending 'join [keyword]' to the sandbox number.` 
-          });
-        }
-      } else {
-        return res.status(400).json({ 
-          success: false, 
-          error: `WhatsApp service not fully configured. Missing: ${!sid ? 'SID ' : ''}${!token ? 'Token ' : ''}${!rawFrom ? 'Number' : ''}` 
-        });
-      }
-    }
-    
     res.json({ success: true, message: "Code sent successfully" });
   });
 
-  app.post("/api/verify/check", (req, res) => {
-    const { contactValue, code } = req.body;
-    const normalizedValue = contactValue.trim().toLowerCase();
+  app.post("/api/verify/check", async (req, res) => {
+    const { contactValue, code, contactType } = req.body;
+    if (!contactValue || !code) return res.status(400).json({ error: "Contact value and code required" });
+
+    let normalizedValue = contactValue.trim().toLowerCase();
+    if (contactType === 'whatsapp' || contactType === 'sms') {
+      normalizedValue = normalizedValue.replace(/[\s\-\(\)]/g, '');
+      if (/^\d+$/.test(normalizedValue) && !normalizedValue.startsWith('+')) {
+        if (normalizedValue.startsWith('01')) normalizedValue = '+6' + normalizedValue;
+        else if (normalizedValue.startsWith('60')) normalizedValue = '+' + normalizedValue;
+        else normalizedValue = '+' + normalizedValue;
+      }
+    }
+
+    // 1. Try Twilio Verify Check if applicable
+    const sid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
+    const token = (process.env.TWILIO_AUTH_TOKEN || "").trim();
+    const verifyServiceSid = (process.env.TWILIO_VERIFY_SERVICE_SID || "VA93662e4b7bf8e346e5c860c24f6c75bd").trim();
+
+    if (sid && token && (contactType === 'whatsapp' || contactType === 'sms')) {
+      try {
+        const client = twilio(sid, token);
+        console.log(`[TWILIO VERIFY CHECK] Checking code for ${normalizedValue}`);
+        
+        const check = await client.verify.v2.services(verifyServiceSid)
+          .verificationChecks
+          .create({ to: normalizedValue, code: code });
+        
+        if (check.status === 'approved') {
+          console.log(`[TWILIO VERIFY CHECK SUCCESS] ${normalizedValue} verified`);
+          return res.json({ success: true });
+        } else {
+          console.log(`[TWILIO VERIFY CHECK FAILED] Status: ${check.status}`);
+          return res.status(400).json({ error: "Invalid or expired verification code" });
+        }
+      } catch (error: any) {
+        console.error("[TWILIO VERIFY CHECK ERROR]", error);
+        return res.status(500).json({ error: `Verification service error: ${error.message}` });
+      }
+    }
+
+    // Fallback to manual OTP check
     const storedCode = otps.get(normalizedValue);
-    
     if (storedCode && storedCode === code) {
       otps.delete(normalizedValue);
       res.json({ success: true });

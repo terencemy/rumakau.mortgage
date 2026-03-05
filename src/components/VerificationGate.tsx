@@ -9,7 +9,7 @@ interface Props {
 }
 
 export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) => {
-  const [method, setMethod] = useState<'email' | 'whatsapp' | null>(null);
+  const [method, setMethod] = useState<'email' | 'whatsapp' | 'sms' | null>(null);
   const [value, setValue] = useState('');
   const [step, setStep] = useState<'input' | 'otp'>('input');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -18,7 +18,7 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<{ 
     resend: { status: 'ready' | 'missing', preview?: string },
-    twilio: { status: 'ready' | 'missing', sidPreview?: string, tokenPreview?: string, numberPreview?: string }
+    twilio: { status: 'ready' | 'missing', sidPreview?: string, tokenPreview?: string, numberPreview?: string, verifyServiceSidPreview?: string }
   }>({ 
     resend: { status: 'missing' }, 
     twilio: { status: 'missing' } 
@@ -57,7 +57,8 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
           status: data.hasTwilio ? 'ready' : 'missing', 
           sidPreview: data.twilioSidPreview,
           tokenPreview: data.twilioTokenPreview,
-          numberPreview: data.twilioNumberPreview
+          numberPreview: data.twilioNumberPreview,
+          verifyServiceSidPreview: data.verifyServiceSidPreview
         }
       }))
       .catch(() => {});
@@ -122,7 +123,7 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
       const response = await fetch('/api/verify/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contactValue: value, code: otp.join('') }),
+        body: JSON.stringify({ contactValue: value, code: otp.join(''), contactType: method }),
       });
       
       const data = await response.json();
@@ -169,7 +170,7 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                 <div className="flex flex-col items-center gap-2">
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-600 uppercase tracking-wider border border-emerald-100">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    WhatsApp Active ({apiStatus.twilio.sidPreview})
+                    Twilio Verify Active ({apiStatus.twilio.verifyServiceSidPreview})
                   </div>
                   <button 
                     onClick={checkTwilioDiag}
@@ -208,26 +209,36 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
               exit={{ opacity: 0, x: -20 }}
               className="space-y-6"
             >
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => setMethod('email')}
-                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
+                  className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
                     method === 'email' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
                   }`}
                 >
-                  <Mail size={24} />
-                  <span className="text-xs font-bold uppercase tracking-wider">Email</span>
+                  <Mail size={20} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Email</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setMethod('whatsapp')}
-                  className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
+                  className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
                     method === 'whatsapp' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
                   }`}
                 >
-                  <MessageSquare size={24} />
-                  <span className="text-xs font-bold uppercase tracking-wider">WhatsApp</span>
+                  <MessageSquare size={20} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMethod('sms')}
+                  className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
+                    method === 'sms' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
+                  }`}
+                >
+                  <ShieldCheck size={20} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">SMS</span>
                 </button>
               </div>
 
@@ -235,7 +246,7 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                 <form onSubmit={handleSendCode} className="space-y-4">
                   <div>
                     <label className="label-text">
-                      {method === 'email' ? 'Email Address' : 'WhatsApp Number'}
+                      {method === 'email' ? 'Email Address' : method === 'whatsapp' ? 'WhatsApp Number' : 'Phone Number'}
                     </label>
                     <input
                       type={method === 'email' ? 'email' : 'tel'}
