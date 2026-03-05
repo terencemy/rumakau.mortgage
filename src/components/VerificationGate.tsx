@@ -271,7 +271,7 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                   
                   <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
                     <a 
-                      href="https://wa.me/60123632338?text=Hi%20Terence,%20I'm%20having%20trouble%20receiving%20the%20verification%20code%20on%20Rumakau.com.%20Can%20you%20assist?"
+                      href="https://wa.me/60123632338?text=Hi%20Terence%2C%20I%E2%80%99m%20planning%20to%20purchase%20a%20property%20and%20would%20like%20to%20check%20my%20home%20loan%20eligibility.%20Could%20you%20assist%20me%20with%20the%20mortgage%20application%3F"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition-colors text-center"

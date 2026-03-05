@@ -257,7 +257,7 @@ export const AnalysisDashboard: React.FC<Props> = ({ result, onReset }) => {
               </button>
               
               <a
-                href="https://wa.me/60123632338?text=Hi%20Terence,%20I%20would%20like%20to%20enquire%20about%20the%20mortgage%20application%20process%20and%20available%20assistance."
+                href="https://wa.me/60123632338?text=Hi%20Terence%2C%20I%E2%80%99m%20planning%20to%20purchase%20a%20property%20and%20would%20like%20to%20check%20my%20home%20loan%20eligibility.%20Could%20you%20assist%20me%20with%20the%20mortgage%20application%3F"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 bg-white text-slate-700 py-3 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all border border-slate-200 group no-print"
