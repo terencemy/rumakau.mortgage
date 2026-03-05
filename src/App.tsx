@@ -50,7 +50,14 @@ export default function App() {
           body: JSON.stringify({
             ...contactInfo,
             mainBorrowerName: analysisRequest.mainBorrower.name,
+            dsrMain: analysisResult.dsrMain,
+            dsrJoint: analysisResult.dsrJoint,
             combinedDsr: analysisResult.dsrCombined,
+            netMonthlyIncomeMain: analysisResult.netMonthlyIncomeMain,
+            netMonthlyIncomeJoint: analysisResult.netMonthlyIncomeJoint,
+            stressTestInstallment: analysisResult.stressTestInstallment,
+            approvalProbability: analysisResult.approvalProbability,
+            bankCategory: analysisResult.bankCategory,
             riskGrade: analysisResult.riskGrade,
             timestamp: new Date().toISOString()
           })

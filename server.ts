@@ -30,7 +30,14 @@ try {
       contactType TEXT,
       contactValue TEXT,
       mainBorrowerName TEXT,
+      dsrMain REAL,
+      dsrJoint REAL,
       combinedDsr REAL,
+      netMonthlyIncomeMain REAL,
+      netMonthlyIncomeJoint REAL,
+      stressTestInstallment REAL,
+      approvalProbability REAL,
+      bankCategory TEXT,
       riskGrade TEXT
     )
   `);
@@ -224,7 +231,13 @@ async function startServer() {
 
   // Lead capture API
   app.post("/api/leads", (req, res) => {
-    const { timestamp, contactType, contactValue, mainBorrowerName, combinedDsr, riskGrade } = req.body;
+    const { 
+      timestamp, contactType, contactValue, mainBorrowerName, 
+      dsrMain, dsrJoint, combinedDsr, 
+      netMonthlyIncomeMain, netMonthlyIncomeJoint, 
+      stressTestInstallment, approvalProbability, 
+      bankCategory, riskGrade 
+    } = req.body;
     
     if (!db) {
       console.warn("[LEAD] DB not available, logging to console only:", req.body);
@@ -233,10 +246,22 @@ async function startServer() {
 
     try {
       const stmt = db.prepare(`
-        INSERT INTO leads (timestamp, contactType, contactValue, mainBorrowerName, combinedDsr, riskGrade)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO leads (
+          timestamp, contactType, contactValue, mainBorrowerName, 
+          dsrMain, dsrJoint, combinedDsr, 
+          netMonthlyIncomeMain, netMonthlyIncomeJoint, 
+          stressTestInstallment, approvalProbability, 
+          bankCategory, riskGrade
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      stmt.run(timestamp, contactType, contactValue, mainBorrowerName, combinedDsr, riskGrade);
+      stmt.run(
+        timestamp, contactType, contactValue, mainBorrowerName, 
+        dsrMain, dsrJoint, combinedDsr, 
+        netMonthlyIncomeMain, netMonthlyIncomeJoint, 
+        stressTestInstallment, approvalProbability, 
+        bankCategory, riskGrade
+      );
       console.log("[LEAD] Saved to DB:", req.body);
       res.json({ success: true });
     } catch (error) {
@@ -334,14 +359,27 @@ async function startServer() {
       }
 
       // Generate CSV
-      const headers = ["ID", "Timestamp", "Type", "Contact", "Name", "DSR", "Grade"];
+      const headers = [
+        "ID", "Timestamp", "Type", "Contact", "Name", 
+        "DSR Main (%)", "DSR Joint (%)", "Combined DSR (%)", 
+        "Net Income Main (RM)", "Net Income Joint (RM)", 
+        "Stress Test Installment (RM)", "Approval Prob (%)", 
+        "Bank Category", "Risk Grade"
+      ];
       const rows = (leads as any[]).map(l => [
         l.id,
         l.timestamp,
         l.contactType,
         l.contactValue,
         l.mainBorrowerName,
+        l.dsrMain,
+        l.dsrJoint,
         l.combinedDsr,
+        l.netMonthlyIncomeMain,
+        l.netMonthlyIncomeJoint,
+        l.stressTestInstallment,
+        l.approvalProbability,
+        l.bankCategory,
         l.riskGrade
       ]);
 
