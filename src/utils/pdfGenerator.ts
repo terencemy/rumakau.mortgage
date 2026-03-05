@@ -75,8 +75,8 @@ export const downloadBNMGuidelines = () => {
   // Footer
   doc.setFontSize(8);
   doc.setTextColor(148, 163, 184); // slate-400
-  doc.text('Disclaimer: This document is a summary for educational purposes and does not constitute official legal or financial advice.', 14, 285);
-  doc.text('Refer to Bank Negara Malaysia (BNM) official policy documents for full regulatory details.', 14, 290);
+  doc.text('© 2026 Rumakau.com. All rights reserved. This platform is intended for professional use.', 14, 285);
+  doc.text('For further assistance with mortgage applications, please contact our support team.', 14, 290);
 
   doc.save('BNM_Lending_Guidelines_Rumakau.pdf');
 };

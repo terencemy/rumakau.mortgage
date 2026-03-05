@@ -120,6 +120,14 @@ export default function App() {
           </p>
         </section>
 
+        {/* Print-only Footer for PDF Export */}
+        <div className="hidden print:block fixed bottom-0 left-0 right-0 text-center py-8 border-t border-slate-100 bg-white z-[100]">
+          <p className="text-[10px] text-slate-400 font-medium max-w-2xl mx-auto leading-relaxed">
+            © 2026 Rumakau.com. All rights reserved. This platform is intended for professional use. 
+            For further assistance with mortgage applications, please contact our support team.
+          </p>
+        </div>
+
         <AnimatePresence mode="wait">
           {state === 'form' && (
             <motion.div
