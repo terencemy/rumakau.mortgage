@@ -69,7 +69,6 @@ async function startServer() {
     
     // Check environment variable first, then fallback
     const envGeminiKey = (process.env.GEMINI_API_KEY || "").trim();
-    // Corrected fallback based on visual inspection of screenshot (using 'I' instead of 'l')
     const fallbackKey = "AIzaSyDgmn2993iMD45j1LfJ6n1fEVGxjITyA2A";
     const geminiKey = envGeminiKey || fallbackKey;
     const isUsingFallback = !envGeminiKey;
@@ -81,14 +80,41 @@ async function startServer() {
       twilioSidLength: twilioSid.length,
       twilioTokenLength: twilioToken.length,
       twilioNumberLength: twilioNumber.length,
-      twilioPreview: twilioSid ? `${twilioSid.substring(0, 4)}...` : null,
+      twilioSidPreview: twilioSid ? `${twilioSid.substring(0, 8)}...` : null,
+      twilioTokenPreview: twilioToken ? `${twilioToken.substring(0, 4)}...` : null,
+      twilioNumberPreview: twilioNumber,
       hasGemini: !!geminiKey,
       geminiFullPreview: geminiKey ? `${geminiKey.substring(0, 10)}...${geminiKey.slice(-10)}` : null,
       isUsingFallback,
       dbStatus: !!db ? "Connected" : "Error",
       envKeyLength: envGeminiKey.length,
-      tip: "If geminiFullPreview doesn't match your Google AI Studio key exactly, update your Render Environment Variables."
+      tip: "If twilioSidPreview doesn't match your Twilio Console, update your Environment Variables."
     });
+  });
+
+  // Twilio Diagnostic API
+  app.get("/api/admin/test-twilio", async (req, res) => {
+    const sid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
+    const token = (process.env.TWILIO_AUTH_TOKEN || "").trim();
+    
+    if (!sid || !token) {
+      return res.status(400).json({ success: false, error: "Twilio SID or Token missing in environment variables" });
+    }
+    
+    try {
+      const client = twilio(sid, token);
+      const account = await client.api.v2010.accounts(sid).fetch();
+      res.json({ 
+        success: true, 
+        accountStatus: account.status,
+        accountType: account.type,
+        friendlyName: account.friendlyName,
+        sidPreview: `${sid.substring(0, 8)}...`
+      });
+    } catch (error: any) {
+      console.error("[TWILIO DIAGNOSTIC ERROR]", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
   });
 
   // Test Gemini API connection
@@ -204,38 +230,44 @@ async function startServer() {
 
     // 3. Attempt Real WhatsApp Delivery if Twilio is configured
     if (contactType === 'whatsapp') {
-      if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_NUMBER) {
+      const sid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
+      const token = (process.env.TWILIO_AUTH_TOKEN || "").trim();
+      const rawFrom = (process.env.TWILIO_WHATSAPP_NUMBER || "").trim();
+
+      if (sid && token && rawFrom) {
         try {
-          const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          const client = twilio(sid, token);
           
           // Ensure the 'to' number is in WhatsApp format for Twilio
           const formattedTo = normalizedValue.startsWith('whatsapp:') ? normalizedValue : `whatsapp:${normalizedValue}`;
           
-          // Ensure the 'from' number is in WhatsApp format
-          const from = process.env.TWILIO_WHATSAPP_NUMBER.startsWith('whatsapp:') 
-            ? process.env.TWILIO_WHATSAPP_NUMBER 
-            : `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`;
+          // Ensure the 'from' number is in WhatsApp format and has a +
+          let from = rawFrom;
+          if (!from.startsWith('whatsapp:')) {
+            if (!from.startsWith('+') && /^\d+$/.test(from)) from = '+' + from;
+            from = `whatsapp:${from}`;
+          }
           
-          console.log(`[TWILIO] Sending WhatsApp from ${from} to ${formattedTo}`);
+          console.log(`[TWILIO] Sending WhatsApp: From=${from}, To=${formattedTo}`);
           
-          await client.messages.create({
+          const message = await client.messages.create({
             from: from,
             to: formattedTo,
             body: `Your Rumakau.com verification code is: ${code}. Do not share this code with anyone.`
           });
           
-          console.log(`[TWILIO SUCCESS] WhatsApp sent to ${formattedTo}`);
+          console.log(`[TWILIO SUCCESS] SID: ${message.sid}, Status: ${message.status}`);
         } catch (error: any) {
           console.error("[TWILIO ERROR]", error);
           return res.status(500).json({ 
             success: false, 
-            error: `WhatsApp error: ${error.message}. If using Twilio Sandbox, ensure you have joined the sandbox by sending 'join [keyword]' to ${process.env.TWILIO_WHATSAPP_NUMBER}.` 
+            error: `WhatsApp error: ${error.message}. (From: ${rawFrom}). If using Twilio Sandbox, ensure you have joined by sending 'join [keyword]' to the sandbox number.` 
           });
         }
       } else {
         return res.status(400).json({ 
           success: false, 
-          error: "WhatsApp service not configured. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_NUMBER in environment variables." 
+          error: `WhatsApp service not fully configured. Missing: ${!sid ? 'SID ' : ''}${!token ? 'Token ' : ''}${!rawFrom ? 'Number' : ''}` 
         });
       }
     }

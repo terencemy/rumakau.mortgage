@@ -18,11 +18,34 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<{ 
     resend: { status: 'ready' | 'missing', preview?: string },
-    twilio: { status: 'ready' | 'missing', preview?: string }
+    twilio: { status: 'ready' | 'missing', sidPreview?: string, tokenPreview?: string, numberPreview?: string }
   }>({ 
     resend: { status: 'missing' }, 
     twilio: { status: 'missing' } 
   });
+  const [diagResult, setDiagResult] = useState<{ success: boolean, message: string } | null>(null);
+  const [isCheckingDiag, setIsCheckingDiag] = useState(false);
+
+  const checkTwilioDiag = async () => {
+    setIsCheckingDiag(true);
+    setDiagResult(null);
+    try {
+      const res = await fetch('/api/admin/test-twilio');
+      const data = await res.json();
+      if (data.success) {
+        setDiagResult({ 
+          success: true, 
+          message: `Twilio API Valid! Account: ${data.friendlyName} (${data.accountStatus})` 
+        });
+      } else {
+        setDiagResult({ success: false, message: `Twilio Error: ${data.error}` });
+      }
+    } catch (err: any) {
+      setDiagResult({ success: false, message: `Request failed: ${err.message}` });
+    } finally {
+      setIsCheckingDiag(false);
+    }
+  };
 
   useEffect(() => {
     // Check if API is configured on mount
@@ -30,7 +53,12 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
       .then(res => res.json())
       .then(data => setApiStatus({ 
         resend: { status: data.hasResend ? 'ready' : 'missing', preview: data.resendPreview },
-        twilio: { status: data.hasTwilio ? 'ready' : 'missing', preview: data.twilioPreview }
+        twilio: { 
+          status: data.hasTwilio ? 'ready' : 'missing', 
+          sidPreview: data.twilioSidPreview,
+          tokenPreview: data.twilioTokenPreview,
+          numberPreview: data.twilioNumberPreview
+        }
       }))
       .catch(() => {});
   }, []);
@@ -138,9 +166,23 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
               )}
               
               {apiStatus.twilio.status === 'ready' ? (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-600 uppercase tracking-wider border border-emerald-100">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  WhatsApp Active ({apiStatus.twilio.preview})
+                <div className="flex flex-col items-center gap-2">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-600 uppercase tracking-wider border border-emerald-100">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    WhatsApp Active ({apiStatus.twilio.sidPreview})
+                  </div>
+                  <button 
+                    onClick={checkTwilioDiag}
+                    disabled={isCheckingDiag}
+                    className="text-[9px] font-bold text-slate-400 hover:text-emerald-600 uppercase tracking-widest transition-colors"
+                  >
+                    {isCheckingDiag ? 'Checking API...' : 'Recheck Twilio API'}
+                  </button>
+                  {diagResult && (
+                    <div className={`text-[9px] font-bold px-2 py-1 rounded ${diagResult.success ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                      {diagResult.message}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border border-slate-100">
