@@ -110,7 +110,7 @@ export default function App() {
               <div className="text-center max-w-2xl mx-auto space-y-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
                   <Sparkles size={12} />
-                  Powered by Gemini 1.5 Flash Latest
+                  Powered by Gemini 3.0 Flash
                 </div>
                 <h2 className="text-4xl md:text-5xl font-serif italic text-slate-900">
                   DSR Check

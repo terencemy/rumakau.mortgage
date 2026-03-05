@@ -89,7 +89,7 @@ async function startServer() {
     const geminiKey = envKey || fallbackKey;
 
     const results: any[] = [];
-    const modelsToTest = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro", "gemini-pro", "gemini-2.0-flash-exp"];
+    const modelsToTest = ["gemini-3-flash-preview", "gemini-2.0-flash", "gemini-flash-latest"];
 
     try {
       const { GoogleGenAI } = await import("@google/genai");
@@ -337,7 +337,7 @@ async function startServer() {
       // Retry logic for 503 errors and model fallback for 404 errors
       let attempts = 0;
       let response: any;
-      const modelsToTry = ["gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-pro", "gemini-1.5-pro"];
+      const modelsToTry = ["gemini-3-flash-preview", "gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash-latest"];
       let currentModelIndex = 0;
 
       while (attempts < 5 && currentModelIndex < modelsToTry.length) {
