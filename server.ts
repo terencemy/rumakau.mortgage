@@ -245,11 +245,87 @@ async function startServer() {
     }
   });
 
-  // Admin Download API
+  // Admin Verification & Leads Download
+  const adminOtps = new Map<string, string>();
+  const ALLOWED_ADMINS = ["terencehla@gmail.com"];
+
+  app.post("/api/admin/auth/send", async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email required" });
+    
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!ALLOWED_ADMINS.includes(normalizedEmail)) {
+      return res.status(403).json({ error: "Access denied. Not an authorized admin." });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    adminOtps.set(normalizedEmail, code);
+    
+    console.log(`[ADMIN AUTH] Sent ${code} to ${normalizedEmail}`);
+    
+    // Broadcast for dev/testing
+    io.emit("otp_sent", { contactValue: normalizedEmail, code, contactType: 'email' });
+
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const { Resend } = await import('resend');
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: 'admin@rumakau.com',
+          to: normalizedEmail,
+          subject: 'Admin Access Code - Rumakau.com',
+          html: `
+            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+              <h2 style="color: #0f172a;">Admin Access Verification</h2>
+              <p>Your one-time access code for the Rumakau Admin Panel is:</p>
+              <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #2563eb; margin: 20px 0;">
+                ${code}
+              </div>
+              <p style="font-size: 12px; color: #64748b;">This code is for authorized personnel only. If you did not request this, please secure your account.</p>
+            </div>
+          `
+        });
+      } catch (error: any) {
+        console.error("[RESEND ADMIN ERROR]", error);
+      }
+    }
+    
+    res.json({ success: true });
+  });
+
+  app.post("/api/admin/auth/verify", (req, res) => {
+    const { email, code } = req.body;
+    const normalizedEmail = email.trim().toLowerCase();
+    const storedCode = adminOtps.get(normalizedEmail);
+    
+    if (storedCode && storedCode === code) {
+      // In a real app, we'd issue a JWT here. For this demo, we'll use a simple session-like approach
+      // but since we don't have sessions, we'll just return success and the client will include the code in the download request
+      res.json({ success: true, token: code }); 
+    } else {
+      res.status(400).json({ error: "Invalid or expired code" });
+    }
+  });
+
+  // Admin Download API (Restricted)
   app.get("/api/admin/leads/download", (req, res) => {
+    const { email, token } = req.query;
+    
+    if (!email || !token) {
+      return res.status(401).send("Unauthorized access.");
+    }
+
+    const normalizedEmail = (email as string).trim().toLowerCase();
+    const storedCode = adminOtps.get(normalizedEmail);
+
+    if (!ALLOWED_ADMINS.includes(normalizedEmail) || storedCode !== token) {
+      return res.status(403).send("Forbidden: Invalid admin credentials or expired session.");
+    }
+
     if (!db) {
       return res.status(500).send("Database not available.");
     }
+    
     try {
       const leads = db.prepare("SELECT * FROM leads ORDER BY timestamp DESC").all();
       

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MortgageForm } from './components/MortgageForm';
 import { AnalysisDashboard } from './components/AnalysisDashboard';
 import { VerificationGate } from './components/VerificationGate';
+import { AdminAuthModal } from './components/AdminAuthModal';
 import { analyzeMortgage } from './components/services/gemini';
 import { MortgageAnalysisRequest, MortgageAnalysisResult } from './types';
 import { ShieldCheck, Calculator, FileText, Sparkles } from 'lucide-react';
@@ -16,6 +17,7 @@ export default function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisRequest, setAnalysisRequest] = useState<MortgageAnalysisRequest | null>(null);
   const [analysisResult, setAnalysisResult] = useState<MortgageAnalysisResult | null>(null);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
   const handleFormSubmit = async (data: MortgageAnalysisRequest) => {
     setIsAnalyzing(true);
@@ -170,6 +172,11 @@ export default function App() {
         </AnimatePresence>
       </main>
 
+      <AdminAuthModal 
+        isOpen={isAdminModalOpen} 
+        onClose={() => setIsAdminModalOpen(false)} 
+      />
+
       <footer className="border-t border-slate-200 py-12 mt-20 no-print">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2 opacity-50">
@@ -182,11 +189,7 @@ export default function App() {
           <div className="flex gap-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
             <button onClick={downloadBNMGuidelines} className="hover:text-slate-900 transition-colors">BNM Guidelines</button>
             <button 
-              onClick={() => {
-                if(window.confirm("Download all sales leads?")) {
-                  window.location.href = "/api/admin/leads/download";
-                }
-              }} 
+              onClick={() => setIsAdminModalOpen(true)} 
               className="hover:text-slate-900 transition-colors opacity-20 hover:opacity-100"
             >
               Admin
