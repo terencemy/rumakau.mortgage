@@ -37,21 +37,34 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
   }, []);
 
   useEffect(() => {
-    const socket = io();
+    const socket = io({
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5
+    });
     
     socket.on('otp_sent', (data: { contactValue: string, code: string, contactType: string }) => {
-      const normalizedInput = value.trim().toLowerCase();
+      // Clean current input for comparison to match server logic
+      let normalizedInput = value.trim().toLowerCase();
+      if (method === 'whatsapp') {
+        normalizedInput = normalizedInput.replace(/[\s\-\(\)]/g, '');
+        if (/^\d+$/.test(normalizedInput) && !normalizedInput.startsWith('+')) {
+          if (normalizedInput.startsWith('01')) normalizedInput = '+6' + normalizedInput;
+          else if (normalizedInput.startsWith('60')) normalizedInput = '+' + normalizedInput;
+          else normalizedInput = '+' + normalizedInput;
+        }
+      }
+
       if (data.contactValue === normalizedInput) {
         setLiveNotification({ code: data.code, type: data.contactType });
-        // Auto-clear notification after 10 seconds
-        setTimeout(() => setLiveNotification(null), 10000);
+        // Auto-clear notification after 15 seconds
+        setTimeout(() => setLiveNotification(null), 15000);
       }
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [value]);
+  }, [value, method]);
 
   useEffect(() => {
     let interval: any;
@@ -248,6 +261,11 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                       value={value}
                       onChange={e => setValue(e.target.value)}
                     />
+                    {method === 'whatsapp' && apiStatus.twilio.status === 'ready' && (
+                      <p className="mt-2 text-[10px] text-slate-400 leading-relaxed">
+                        Note: If using Twilio Sandbox, ensure you have sent <span className="font-mono font-bold text-emerald-600">join [keyword]</span> to the Twilio number first.
+                      </p>
+                    )}
                   </div>
                   <button
                     type="submit"
@@ -348,16 +366,42 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
 
                 <div className="text-center">
                   {timer > 0 ? (
-                    <p className="text-xs text-slate-400">
-                      Resend code in <span className="font-bold">{timer}s</span>
-                    </p>
+                    <div className="space-y-2">
+                      <p className="text-xs text-slate-400">
+                        Resend code in <span className="font-bold">{timer}s</span>
+                      </p>
+                      {timer < 45 && (
+                        <p className="text-[10px] text-slate-400 italic">
+                          Code not arriving? Check your {method === 'email' ? 'Spam folder' : 'WhatsApp connectivity'}.
+                        </p>
+                      )}
+                    </div>
                   ) : (
-                    <button 
-                      onClick={handleSendCode}
-                      className="text-xs font-bold text-emerald-600 hover:underline"
-                    >
-                      Resend Code
-                    </button>
+                    <div className="space-y-3">
+                      <button 
+                        onClick={handleSendCode}
+                        className="text-xs font-bold text-emerald-600 hover:underline"
+                      >
+                        Resend Code
+                      </button>
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Emergency bypass for demo purposes if code really doesn't arrive
+                            const bypass = confirm("Code still not arriving? For this demo, would you like to see the code here in the browser?");
+                            if (bypass) {
+                              // We can't easily get the code from the server without another API call,
+                              // but we can tell them to check the 'Incoming Code' notification which should have appeared
+                              alert("Please look for the black notification bar at the top of this verification box. It contains your code for testing purposes.");
+                            }
+                          }}
+                          className="text-[9px] text-slate-300 uppercase tracking-widest hover:text-slate-500"
+                        >
+                          Troubleshoot Verification
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

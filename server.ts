@@ -7,6 +7,8 @@ import fs from "fs";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
 import Database from "better-sqlite3";
+import twilio from "twilio";
+import { Resend } from "resend";
 
 dotenv.config();
 
@@ -145,7 +147,20 @@ async function startServer() {
     const { contactType, contactValue } = req.body;
     if (!contactValue) return res.status(400).json({ error: "Contact value required" });
     
-    const normalizedValue = contactValue.trim().toLowerCase();
+    let normalizedValue = contactValue.trim().toLowerCase();
+    
+    // Clean phone numbers for WhatsApp: remove spaces, dashes, parentheses
+    if (contactType === 'whatsapp') {
+      normalizedValue = normalizedValue.replace(/[\s\-\(\)]/g, '');
+      // Ensure it starts with + if it's a number
+      if (/^\d+$/.test(normalizedValue) && !normalizedValue.startsWith('+')) {
+        // Default to Malaysia (+6) if it starts with 01 or 60
+        if (normalizedValue.startsWith('01')) normalizedValue = '+6' + normalizedValue;
+        else if (normalizedValue.startsWith('60')) normalizedValue = '+' + normalizedValue;
+        else normalizedValue = '+' + normalizedValue; // Generic fallback
+      }
+    }
+    
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     otps.set(normalizedValue, code);
     
@@ -157,7 +172,6 @@ async function startServer() {
     // 2. Attempt Real Email Delivery if Resend is configured
     if (contactType === 'email' && process.env.RESEND_API_KEY) {
       try {
-        const { Resend } = await import('resend');
         const resend = new Resend(process.env.RESEND_API_KEY);
         const { data, error } = await resend.emails.send({
           from: 'verify@rumakau.com',
@@ -191,25 +205,29 @@ async function startServer() {
     // 3. Attempt Real WhatsApp Delivery if Twilio is configured
     if (contactType === 'whatsapp' && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_NUMBER) {
       try {
-        const twilio = await import('twilio');
-        const client = twilio.default(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
         
-        // Ensure the number is in WhatsApp format for Twilio
-        const to = normalizedValue.startsWith('whatsapp:') ? normalizedValue : `whatsapp:${normalizedValue}`;
+        // Ensure the 'to' number is in WhatsApp format for Twilio
+        const formattedTo = normalizedValue.startsWith('whatsapp:') ? normalizedValue : `whatsapp:${normalizedValue}`;
+        
+        // Ensure the 'from' number is in WhatsApp format
+        const from = process.env.TWILIO_WHATSAPP_NUMBER.startsWith('whatsapp:') 
+          ? process.env.TWILIO_WHATSAPP_NUMBER 
+          : `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`;
+        
+        console.log(`[TWILIO] Sending WhatsApp from ${from} to ${formattedTo}`);
         
         await client.messages.create({
-          from: process.env.TWILIO_WHATSAPP_NUMBER,
-          to: to,
+          from: from,
+          to: formattedTo,
           body: `Your Rumakau.com verification code is: ${code}. Do not share this code with anyone.`
         });
         
-        console.log(`[TWILIO SUCCESS] WhatsApp sent to ${to}`);
+        console.log(`[TWILIO SUCCESS] WhatsApp sent to ${formattedTo}`);
       } catch (error: any) {
         console.error("[TWILIO ERROR]", error);
-        return res.status(500).json({ 
-          success: false, 
-          error: `WhatsApp service error: ${error.message}. Please check your Twilio credentials.` 
-        });
+        // We don't return 500 here to allow the socket.io fallback to work for the user
+        // but we log it clearly.
       }
     }
     
@@ -293,7 +311,6 @@ async function startServer() {
 
     if (process.env.RESEND_API_KEY) {
       try {
-        const { Resend } = await import('resend');
         const resend = new Resend(process.env.RESEND_API_KEY);
         await resend.emails.send({
           from: 'admin@rumakau.com',
