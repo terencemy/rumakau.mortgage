@@ -246,8 +246,8 @@ export const AnalysisDashboard: React.FC<Props> = ({ result, onReset }) => {
               ))}
             </div>
 
-            <div className="mt-8 pt-8 border-t border-slate-100">
-              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Compliance Resources</h4>
+            <div className="mt-8 pt-8 border-t border-slate-100 space-y-3">
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Compliance & Support</h4>
               <button
                 onClick={downloadBNMGuidelines}
                 className="w-full flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 py-3 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-all border border-emerald-100 group"
@@ -255,6 +255,16 @@ export const AnalysisDashboard: React.FC<Props> = ({ result, onReset }) => {
                 <FileCheck size={16} />
                 Download BNM Guidelines PDF
               </button>
+              
+              <a
+                href="https://wa.me/60123632338?text=Hi%20Terence,%20I%20would%20like%20to%20enquire%20about%20the%20mortgage%20application%20process%20and%20available%20assistance."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 bg-white text-slate-700 py-3 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all border border-slate-200 group no-print"
+              >
+                <Languages size={16} className="text-emerald-500" />
+                Contact Support (WhatsApp)
+              </a>
             </div>
             
             <button

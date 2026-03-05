@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, MessageSquare, ShieldCheck, ArrowRight, RefreshCw, CheckCircle2, Bell } from 'lucide-react';
-import { io } from 'socket.io-client';
 
 interface Props {
   onVerified: (contactInfo: { type: 'email' | 'whatsapp', value: string }) => void;
@@ -270,8 +269,17 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                   
-                  {/* Debug Button */}
-                  <div className="pt-4 border-t border-slate-100">
+                  <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
+                    <a 
+                      href="https://wa.me/60123632338?text=Hi%20Terence,%20I'm%20having%20trouble%20receiving%20the%20verification%20code%20on%20Rumakau.com.%20Can%20you%20assist?"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition-colors text-center"
+                    >
+                      Need help? Contact Support
+                    </a>
+                    
+                    {/* Debug Button */}
                     <button
                       type="button"
                       onClick={async () => {

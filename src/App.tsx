@@ -224,7 +224,14 @@ export default function App() {
             </button>
             <a href="#" className="hover:text-slate-900 transition-colors">Privacy</a>
             <a href="#" className="hover:text-slate-900 transition-colors">Terms</a>
-            <a href="#" className="hover:text-slate-900 transition-colors">Support</a>
+            <a 
+              href="https://wa.me/60123632338?text=Hi%20Terence,%20I%20would%20like%20to%20enquire%20about%20the%20mortgage%20application%20process%20and%20available%20assistance." 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-slate-900 transition-colors"
+            >
+              Support
+            </a>
           </div>
         </div>
       </footer>
