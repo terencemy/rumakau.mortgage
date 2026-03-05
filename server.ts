@@ -153,7 +153,7 @@ async function startServer() {
         const { Resend } = await import('resend');
         const resend = new Resend(process.env.RESEND_API_KEY);
         const { data, error } = await resend.emails.send({
-          from: 'onboarding@resend.dev',
+          from: 'verify@rumakau.com',
           to: normalizedValue,
           subject: 'Your Verification Code - Rumakau.com',
           html: `

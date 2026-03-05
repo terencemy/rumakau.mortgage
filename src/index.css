@@ -28,4 +28,74 @@
   .no-print {
     display: none !important;
   }
+
+  /* Reset layout for printing */
+  body, html {
+    background: white !important;
+    color: black !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .min-h-screen {
+    min-height: auto !important;
+  }
+
+  /* Ensure all content is visible (bypass motion animations) */
+  * {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Fix grid and layout issues */
+  .grid, .flex {
+    display: block !important;
+  }
+
+  .glass-panel {
+    background: white !important;
+    border: 1px solid #e2e8f0 !important;
+    margin-bottom: 20px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Remove sticky positioning */
+  .sticky {
+    position: static !important;
+  }
+
+  /* Ensure text is readable */
+  .text-slate-400, .text-slate-500 {
+    color: #64748b !important;
+  }
+
+  /* Page breaks */
+  h2, h3, .section-title {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .max-w-7xl, .max-w-6xl {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .pb-20 {
+    padding-bottom: 0 !important;
+  }
+
+  /* Force background colors for bars and badges */
+  .bg-emerald-500, .bg-amber-500, .bg-rose-500, .bg-emerald-50, .bg-amber-50, .bg-rose-50 {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }

@@ -1,10 +1,10 @@
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 export const downloadBNMGuidelines = () => {
   const doc = new jsPDF();
-  const primaryColor = [15, 23, 42]; // slate-900
-  const accentColor = [5, 150, 105]; // emerald-600
+  const primaryColor: [number, number, number] = [15, 23, 42]; // slate-900
+  const accentColor: [number, number, number] = [5, 150, 105]; // emerald-600
 
   // Header
   doc.setFontSize(22);
@@ -40,7 +40,7 @@ export const downloadBNMGuidelines = () => {
   doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
   doc.text('2. Key Regulatory Limits (Mortgage)', 14, 85);
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: 90,
     head: [['Regulation', 'Limit / Requirement']],
     body: [
@@ -56,7 +56,7 @@ export const downloadBNMGuidelines = () => {
   });
 
   // Section 3: Required Documentation
-  const finalY = (doc as any).lastAutoTable.finalY || 130;
+  const finalY = (doc as any).lastAutoTable?.finalY || 130;
   doc.setFontSize(14);
   doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
   doc.text('3. Standard Documentation Requirements', 14, finalY + 15);
