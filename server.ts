@@ -89,12 +89,23 @@ async function startServer() {
     const geminiKey = envKey || fallbackKey;
 
     const results: any[] = [];
-    const modelsToTest = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro"];
+    const modelsToTest = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro", "gemini-pro", "gemini-2.0-flash-exp"];
 
     try {
       const { GoogleGenAI } = await import("@google/genai");
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       
+      // Try to list models first
+      let availableModels: string[] = [];
+      try {
+        const modelsResponse = await ai.models.list();
+        for await (const model of modelsResponse) {
+          availableModels.push(model.name);
+        }
+      } catch (listErr: any) {
+        console.error("[GEMINI LIST ERROR]", listErr);
+      }
+
       for (const modelName of modelsToTest) {
         try {
           const response = await ai.models.generateContent({
@@ -109,6 +120,7 @@ async function startServer() {
       
       res.json({ 
         keyPreview: `${geminiKey.substring(0, 6)}...${geminiKey.slice(-4)}`,
+        availableModels,
         results 
       });
     } catch (error: any) {
@@ -322,13 +334,18 @@ async function startServer() {
         - If the main borrower's DSR is too high, explain how the joint borrower helps or if further improvements are needed.
       `;
 
-      // Retry logic for 503 errors
+      // Retry logic for 503 errors and model fallback for 404 errors
       let attempts = 0;
       let response: any;
-      while (attempts < 3) {
+      const modelsToTry = ["gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-pro", "gemini-1.5-pro"];
+      let currentModelIndex = 0;
+
+      while (attempts < 5 && currentModelIndex < modelsToTry.length) {
+        const modelName = modelsToTry[currentModelIndex];
         try {
+          console.log(`[GEMINI] Attempting analysis with model: ${modelName}`);
           response = await ai.models.generateContent({
-            model: "gemini-1.5-flash-latest",
+            model: modelName,
             contents: prompt,
             config: {
               responseMimeType: "application/json",
@@ -363,10 +380,15 @@ async function startServer() {
           });
           break; // Success!
         } catch (err: any) {
-          attempts++;
-          if (err.message?.includes("503") || err.message?.includes("UNAVAILABLE")) {
-            console.log(`[GEMINI] 503 error, retrying attempt ${attempts}...`);
-            await new Promise(r => setTimeout(r, 2000 * attempts)); // Exponential backoff
+          const errorMsg = err.message || "";
+          if (errorMsg.includes("503") || errorMsg.includes("UNAVAILABLE")) {
+            attempts++;
+            console.log(`[GEMINI] 503 error for ${modelName}, retrying attempt ${attempts}...`);
+            await new Promise(r => setTimeout(r, 2000 * attempts));
+          } else if (errorMsg.includes("404") || errorMsg.includes("not found")) {
+            console.log(`[GEMINI] Model ${modelName} not found, trying next model...`);
+            currentModelIndex++;
+            if (currentModelIndex >= modelsToTry.length) throw err;
           } else {
             throw err; // Rethrow other errors
           }
