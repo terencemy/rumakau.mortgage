@@ -314,6 +314,34 @@ async function startServer() {
     }
   });
 
+  // Admin JSON API (Restricted)
+  app.get("/api/admin/leads", (req, res) => {
+    const { email, token } = req.query;
+    
+    if (!email || !token) {
+      return res.status(401).json({ error: "Unauthorized access." });
+    }
+
+    const normalizedEmail = (email as string).trim().toLowerCase();
+    const storedCode = adminOtps.get(normalizedEmail);
+
+    if (!ALLOWED_ADMINS.includes(normalizedEmail) || storedCode !== token) {
+      return res.status(403).json({ error: "Forbidden: Invalid admin credentials or expired session." });
+    }
+
+    if (!db) {
+      return res.status(500).json({ error: "Database not available." });
+    }
+    
+    try {
+      const leads = db.prepare("SELECT * FROM leads ORDER BY timestamp DESC").all();
+      res.json({ success: true, leads });
+    } catch (error) {
+      console.error("[FETCH LEADS ERROR]", error);
+      res.status(500).json({ error: "Failed to fetch leads" });
+    }
+  });
+
   // Admin Download API (Restricted)
   app.get("/api/admin/leads/download", (req, res) => {
     const { email, token } = req.query;

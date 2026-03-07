@@ -48,7 +48,8 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            ...contactInfo,
+            contactType: contactInfo.type,
+            contactValue: contactInfo.value,
             mainBorrowerName: analysisRequest.mainBorrower.name,
             propertyAddress: analysisRequest.property.address,
             propertyType: analysisRequest.property.propertyType,
