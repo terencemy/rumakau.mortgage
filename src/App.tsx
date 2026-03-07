@@ -40,7 +40,7 @@ export default function App() {
     }
   };
 
-  const handleVerified = async (contactInfo: { type: 'email' | 'whatsapp', value: string }) => {
+  const handleVerified = async (contactInfo: { type: 'email', value: string }) => {
     // Capture lead
     if (analysisRequest && analysisResult) {
       try {
@@ -50,6 +50,10 @@ export default function App() {
           body: JSON.stringify({
             ...contactInfo,
             mainBorrowerName: analysisRequest.mainBorrower.name,
+            propertyAddress: analysisRequest.property.address,
+            propertyType: analysisRequest.property.propertyType,
+            spaPrice: analysisRequest.property.spaPrice,
+            loanAmount: analysisRequest.property.loanAmount,
             dsrMain: analysisResult.dsrMain,
             dsrJoint: analysisResult.dsrJoint,
             combinedDsr: analysisResult.dsrCombined,

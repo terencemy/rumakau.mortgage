@@ -7,7 +7,6 @@ import fs from "fs";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
 import Database from "better-sqlite3";
-import twilio from "twilio";
 import { Resend } from "resend";
 
 dotenv.config();
@@ -43,6 +42,16 @@ try {
       riskGrade TEXT
     )
   `);
+
+  // Add new columns if they don't exist (for existing databases)
+  try {
+    db.exec("ALTER TABLE leads ADD COLUMN propertyAddress TEXT");
+    db.exec("ALTER TABLE leads ADD COLUMN propertyType TEXT");
+    db.exec("ALTER TABLE leads ADD COLUMN spaPrice REAL");
+    db.exec("ALTER TABLE leads ADD COLUMN loanAmount REAL");
+  } catch (e) {
+    // Columns likely already exist
+  }
   console.log(`[DB] Database initialized at ${dbPath}`);
 } catch (error) {
   console.error("[DB ERROR] Failed to initialize database:", error);
@@ -63,10 +72,6 @@ async function startServer() {
 
   app.get("/api/verify/status", (req, res) => {
     const resendKey = (process.env.RESEND_API_KEY || "").trim();
-    const twilioSid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
-    const twilioToken = (process.env.TWILIO_AUTH_TOKEN || "").trim();
-    const twilioNumber = (process.env.TWILIO_WHATSAPP_NUMBER || "").trim();
-    const verifyServiceSid = (process.env.TWILIO_VERIFY_SERVICE_SID || "VA93662e4b7bf8e346e5c860c24f6c75bd").trim();
     
     // Check environment variable first, then fallback
     const envGeminiKey = (process.env.GEMINI_API_KEY || "").trim();
@@ -77,47 +82,12 @@ async function startServer() {
     res.json({ 
       hasResend: !!resendKey,
       resendPreview: resendKey ? `${resendKey.substring(0, 4)}...` : null,
-      hasTwilio: !!(twilioSid && twilioToken),
-      hasTwilioVerify: !!verifyServiceSid,
-      verifyServiceSidPreview: verifyServiceSid ? `${verifyServiceSid.substring(0, 8)}...` : null,
-      twilioSidLength: twilioSid.length,
-      twilioTokenLength: twilioToken.length,
-      twilioNumberLength: twilioNumber.length,
-      twilioSidPreview: twilioSid ? `${twilioSid.substring(0, 8)}...` : null,
-      twilioTokenPreview: twilioToken ? `${twilioToken.substring(0, 4)}...` : null,
-      twilioNumberPreview: twilioNumber,
       hasGemini: !!geminiKey,
       geminiFullPreview: geminiKey ? `${geminiKey.substring(0, 10)}...${geminiKey.slice(-10)}` : null,
       isUsingFallback,
       dbStatus: !!db ? "Connected" : "Error",
-      envKeyLength: envGeminiKey.length,
-      tip: "If twilioSidPreview doesn't match your Twilio Console, update your Environment Variables."
+      envKeyLength: envGeminiKey.length
     });
-  });
-
-  // Twilio Diagnostic API
-  app.get("/api/admin/test-twilio", async (req, res) => {
-    const sid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
-    const token = (process.env.TWILIO_AUTH_TOKEN || "").trim();
-    
-    if (!sid || !token) {
-      return res.status(400).json({ success: false, error: "Twilio SID or Token missing in environment variables" });
-    }
-    
-    try {
-      const client = twilio(sid, token);
-      const account = await client.api.v2010.accounts(sid).fetch();
-      res.json({ 
-        success: true, 
-        accountStatus: account.status,
-        accountType: account.type,
-        friendlyName: account.friendlyName,
-        sidPreview: `${sid.substring(0, 8)}...`
-      });
-    } catch (error: any) {
-      console.error("[TWILIO DIAGNOSTIC ERROR]", error);
-      res.status(500).json({ success: false, error: error.message });
-    }
   });
 
   // Test Gemini API connection
@@ -178,74 +148,6 @@ async function startServer() {
     
     let normalizedValue = contactValue.trim().toLowerCase();
     
-    // Clean phone numbers for WhatsApp/SMS
-    if (contactType === 'whatsapp' || contactType === 'sms') {
-      normalizedValue = normalizedValue.replace(/[\s\-\(\)]/g, '');
-      if (/^\d+$/.test(normalizedValue) && !normalizedValue.startsWith('+')) {
-        if (normalizedValue.startsWith('01')) normalizedValue = '+6' + normalizedValue;
-        else if (normalizedValue.startsWith('60')) normalizedValue = '+' + normalizedValue;
-        else normalizedValue = '+' + normalizedValue;
-      }
-    }
-    
-    // 1. Try Twilio Verify if configured
-    const sid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
-    const token = (process.env.TWILIO_AUTH_TOKEN || "").trim();
-    const verifyServiceSid = (process.env.TWILIO_VERIFY_SERVICE_SID || "VA93662e4b7bf8e346e5c860c24f6c75bd").trim();
-
-    if (sid && token && (contactType === 'whatsapp' || contactType === 'sms')) {
-      try {
-        const client = twilio(sid, token);
-        const channel = contactType === 'whatsapp' ? 'whatsapp' : 'sms';
-        
-        console.log(`[TWILIO VERIFY] Sending ${channel} to ${normalizedValue}`);
-        
-        try {
-          const verification = await client.verify.v2.services(verifyServiceSid)
-            .verifications
-            .create({ to: normalizedValue, channel: channel });
-          
-          console.log(`[TWILIO VERIFY SUCCESS] SID: ${verification.sid}, Status: ${verification.status}`);
-          return res.json({ success: true, message: "Verification code sent via Twilio Verify" });
-        } catch (verifyErr: any) {
-          // Fallback to manual OTP if WhatsApp channel is disabled in Verify
-          if (contactType === 'whatsapp' && (verifyErr.message.includes('disabled') || verifyErr.code === 60225)) {
-            console.warn("[TWILIO VERIFY FALLBACK] WhatsApp channel disabled in Verify, falling back to Messaging API");
-            
-            const code = Math.floor(100000 + Math.random() * 900000).toString();
-            otps.set(normalizedValue, code);
-            
-            const rawFrom = (process.env.TWILIO_WHATSAPP_NUMBER || "").trim();
-            if (!rawFrom) throw new Error("TWILIO_WHATSAPP_NUMBER not configured for fallback");
-
-            let from = rawFrom;
-            if (!from.startsWith('whatsapp:')) {
-              if (!from.startsWith('+') && /^\d+$/.test(from)) from = '+' + from;
-              from = `whatsapp:${from}`;
-            }
-            
-            const formattedTo = normalizedValue.startsWith('whatsapp:') ? normalizedValue : `whatsapp:${normalizedValue}`;
-            
-            await client.messages.create({
-              from: from,
-              to: formattedTo,
-              body: `Your Rumakau.com verification code is: ${code}. Do not share this code with anyone.`
-            });
-            
-            io.emit("otp_sent", { contactValue: normalizedValue, code, contactType });
-            return res.json({ success: true, message: "Sent via Messaging API (Verify fallback)" });
-          }
-          throw verifyErr;
-        }
-      } catch (error: any) {
-        console.error("[TWILIO ERROR]", error);
-        return res.status(500).json({ 
-          success: false, 
-          error: `Twilio error: ${error.message}.` 
-        });
-      }
-    }
-
     // Fallback to manual OTP for Email or if Twilio not configured
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     otps.set(normalizedValue, code);
@@ -292,45 +194,10 @@ async function startServer() {
   });
 
   app.post("/api/verify/check", async (req, res) => {
-    const { contactValue, code, contactType } = req.body;
+    const { contactValue, code } = req.body;
     if (!contactValue || !code) return res.status(400).json({ error: "Contact value and code required" });
 
     let normalizedValue = contactValue.trim().toLowerCase();
-    if (contactType === 'whatsapp' || contactType === 'sms') {
-      normalizedValue = normalizedValue.replace(/[\s\-\(\)]/g, '');
-      if (/^\d+$/.test(normalizedValue) && !normalizedValue.startsWith('+')) {
-        if (normalizedValue.startsWith('01')) normalizedValue = '+6' + normalizedValue;
-        else if (normalizedValue.startsWith('60')) normalizedValue = '+' + normalizedValue;
-        else normalizedValue = '+' + normalizedValue;
-      }
-    }
-
-    // 1. Try Twilio Verify Check if applicable
-    const sid = (process.env.TWILIO_ACCOUNT_SID || "").trim();
-    const token = (process.env.TWILIO_AUTH_TOKEN || "").trim();
-    const verifyServiceSid = (process.env.TWILIO_VERIFY_SERVICE_SID || "VA93662e4b7bf8e346e5c860c24f6c75bd").trim();
-
-    if (sid && token && (contactType === 'whatsapp' || contactType === 'sms')) {
-      try {
-        const client = twilio(sid, token);
-        console.log(`[TWILIO VERIFY CHECK] Checking code for ${normalizedValue}`);
-        
-        const check = await client.verify.v2.services(verifyServiceSid)
-          .verificationChecks
-          .create({ to: normalizedValue, code: code });
-        
-        if (check.status === 'approved') {
-          console.log(`[TWILIO VERIFY CHECK SUCCESS] ${normalizedValue} verified`);
-          return res.json({ success: true });
-        } else {
-          console.log(`[TWILIO VERIFY CHECK FAILED] Status: ${check.status}`);
-          return res.status(400).json({ error: "Invalid or expired verification code" });
-        }
-      } catch (error: any) {
-        console.error("[TWILIO VERIFY CHECK ERROR]", error);
-        return res.status(500).json({ error: `Verification service error: ${error.message}` });
-      }
-    }
 
     // Fallback to manual OTP check
     const storedCode = otps.get(normalizedValue);
@@ -346,6 +213,7 @@ async function startServer() {
   app.post("/api/leads", (req, res) => {
     const { 
       timestamp, contactType, contactValue, mainBorrowerName, 
+      propertyAddress, propertyType, spaPrice, loanAmount,
       dsrMain, dsrJoint, combinedDsr, 
       netMonthlyIncomeMain, netMonthlyIncomeJoint, 
       stressTestInstallment, approvalProbability, 
@@ -361,15 +229,17 @@ async function startServer() {
       const stmt = db.prepare(`
         INSERT INTO leads (
           timestamp, contactType, contactValue, mainBorrowerName, 
+          propertyAddress, propertyType, spaPrice, loanAmount,
           dsrMain, dsrJoint, combinedDsr, 
           netMonthlyIncomeMain, netMonthlyIncomeJoint, 
           stressTestInstallment, approvalProbability, 
           bankCategory, riskGrade
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       stmt.run(
         timestamp, contactType, contactValue, mainBorrowerName, 
+        propertyAddress, propertyType, spaPrice, loanAmount,
         dsrMain, dsrJoint, combinedDsr, 
         netMonthlyIncomeMain, netMonthlyIncomeJoint, 
         stressTestInstallment, approvalProbability, 
@@ -473,6 +343,7 @@ async function startServer() {
       // Generate CSV
       const headers = [
         "ID", "Timestamp", "Type", "Contact", "Name", 
+        "Property Address", "Property Type", "SPA Price (RM)", "Loan Amount (RM)",
         "DSR Main (%)", "DSR Joint (%)", "Combined DSR (%)", 
         "Net Income Main (RM)", "Net Income Joint (RM)", 
         "Stress Test Installment (RM)", "Approval Prob (%)", 
@@ -484,6 +355,10 @@ async function startServer() {
         l.contactType,
         l.contactValue,
         l.mainBorrowerName,
+        l.propertyAddress,
+        l.propertyType,
+        l.spaPrice,
+        l.loanAmount,
         l.dsrMain,
         l.dsrJoint,
         l.combinedDsr,

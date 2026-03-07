@@ -8,7 +8,7 @@ interface Props {
 }
 
 export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) => {
-  const [method, setMethod] = useState<'email' | 'whatsapp' | 'sms' | null>(null);
+  const [method, setMethod] = useState<'email' | 'whatsapp' | 'sms' | null>('email');
   const [value, setValue] = useState('');
   const [step, setStep] = useState<'input' | 'otp'>('input');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -16,49 +16,17 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<{ 
-    resend: { status: 'ready' | 'missing', preview?: string },
-    twilio: { status: 'ready' | 'missing', sidPreview?: string, tokenPreview?: string, numberPreview?: string, verifyServiceSidPreview?: string }
+    resend: { status: 'ready' | 'missing', preview?: string }
   }>({ 
-    resend: { status: 'missing' }, 
-    twilio: { status: 'missing' } 
+    resend: { status: 'missing' }
   });
-  const [diagResult, setDiagResult] = useState<{ success: boolean, message: string } | null>(null);
-  const [isCheckingDiag, setIsCheckingDiag] = useState(false);
-
-  const checkTwilioDiag = async () => {
-    setIsCheckingDiag(true);
-    setDiagResult(null);
-    try {
-      const res = await fetch('/api/admin/test-twilio');
-      const data = await res.json();
-      if (data.success) {
-        setDiagResult({ 
-          success: true, 
-          message: `Twilio API Valid! Account: ${data.friendlyName} (${data.accountStatus})` 
-        });
-      } else {
-        setDiagResult({ success: false, message: `Twilio Error: ${data.error}` });
-      }
-    } catch (err: any) {
-      setDiagResult({ success: false, message: `Request failed: ${err.message}` });
-    } finally {
-      setIsCheckingDiag(false);
-    }
-  };
 
   useEffect(() => {
     // Check if API is configured on mount
     fetch('/api/verify/status')
       .then(res => res.json())
       .then(data => setApiStatus({ 
-        resend: { status: data.hasResend ? 'ready' : 'missing', preview: data.resendPreview },
-        twilio: { 
-          status: data.hasTwilio ? 'ready' : 'missing', 
-          sidPreview: data.twilioSidPreview,
-          tokenPreview: data.twilioTokenPreview,
-          numberPreview: data.twilioNumberPreview,
-          verifyServiceSidPreview: data.verifyServiceSidPreview
-        }
+        resend: { status: data.hasResend ? 'ready' : 'missing', preview: data.resendPreview }
       }))
       .catch(() => {});
   }, []);
@@ -157,36 +125,11 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
               {apiStatus.resend.status === 'ready' ? (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-600 uppercase tracking-wider border border-emerald-100">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Email Active ({apiStatus.resend.preview})
+                  Email Verification Active
                 </div>
               ) : (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border border-slate-100">
                   Email Simulated
-                </div>
-              )}
-              
-              {apiStatus.twilio.status === 'ready' ? (
-                <div className="flex flex-col items-center gap-2">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-600 uppercase tracking-wider border border-emerald-100">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Twilio Verify Active ({apiStatus.twilio.verifyServiceSidPreview})
-                  </div>
-                  <button 
-                    onClick={checkTwilioDiag}
-                    disabled={isCheckingDiag}
-                    className="text-[9px] font-bold text-slate-400 hover:text-emerald-600 uppercase tracking-widest transition-colors"
-                  >
-                    {isCheckingDiag ? 'Checking API...' : 'Recheck Twilio API'}
-                  </button>
-                  {diagResult && (
-                    <div className={`text-[9px] font-bold px-2 py-1 rounded ${diagResult.success ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                      {diagResult.message}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border border-slate-100">
-                  WhatsApp Simulated
                 </div>
               )}
             </div>
@@ -208,58 +151,20 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
               exit={{ opacity: 0, x: -20 }}
               className="space-y-6"
             >
-              <div className="grid grid-cols-3 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setMethod('email')}
-                  className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                    method === 'email' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
-                  }`}
-                >
-                  <Mail size={20} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Email</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMethod('whatsapp')}
-                  className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                    method === 'whatsapp' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
-                  }`}
-                >
-                  <MessageSquare size={20} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">WhatsApp</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMethod('sms')}
-                  className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                    method === 'sms' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
-                  }`}
-                >
-                  <ShieldCheck size={20} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">SMS</span>
-                </button>
-              </div>
-
-              {method && (
+              <div className="space-y-4">
                 <form onSubmit={handleSendCode} className="space-y-4">
                   <div>
                     <label className="label-text">
-                      {method === 'email' ? 'Email Address' : method === 'whatsapp' ? 'WhatsApp Number' : 'Phone Number'}
+                      Email Address
                     </label>
                     <input
-                      type={method === 'email' ? 'email' : 'tel'}
+                      type="email"
                       required
-                      placeholder={method === 'email' ? 'name@example.com' : '+60123456789'}
+                      placeholder="name@example.com"
                       className="input-field"
                       value={value}
                       onChange={e => setValue(e.target.value)}
                     />
-                    {method === 'whatsapp' && apiStatus.twilio.status === 'ready' && (
-                      <p className="mt-2 text-[10px] text-slate-400 leading-relaxed">
-                        Note: If using Twilio Sandbox, ensure you have sent <span className="font-mono font-bold text-emerald-600">join [keyword]</span> to the Twilio number first.
-                      </p>
-                    )}
                   </div>
                   <button
                     type="submit"
@@ -278,35 +183,9 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                     >
                       Need help? Contact Support
                     </a>
-                    
-                    {/* Debug Button */}
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!value) return alert(`Please enter ${method === 'email' ? 'an email' : 'a WhatsApp number'} first`);
-                        setIsVerifying(true);
-                        try {
-                          const response = await fetch('/api/verify/send', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contactType: method, contactValue: value }),
-                          });
-                          const data = await response.json();
-                          if (response.ok && data.success) alert(`Test ${method} sent! Check your ${method === 'email' ? 'inbox' : 'WhatsApp'}.`);
-                          else throw new Error(data.error || "Unknown error");
-                        } catch (err: any) {
-                          alert("Test failed: " + err.message);
-                        } finally {
-                          setIsVerifying(false);
-                        }
-                      }}
-                      className="w-full py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition-colors"
-                    >
-                      Send Test {method === 'email' ? 'Email' : 'WhatsApp'} Only
-                    </button>
                   </div>
                 </form>
-              )}
+              </div>
             </motion.div>
           ) : (
             <motion.div

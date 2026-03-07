@@ -79,7 +79,7 @@ export interface MortgageAnalysisResult {
 export interface LeadRecord {
   id?: number;
   timestamp: string;
-  contactType: 'email' | 'whatsapp';
+  contactType: 'email';
   contactValue: string;
   mainBorrowerName: string;
   mainBorrowerIncome: number;
