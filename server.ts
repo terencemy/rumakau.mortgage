@@ -259,7 +259,7 @@ async function startServer() {
 
   // Admin Verification & Leads Download
   const adminOtps = new Map<string, string>();
-  const ALLOWED_ADMINS = ["terencehla@gmail.com", "orangeredtravel@gmail.com"];
+  const ALLOWED_ADMINS = ["terencehla@gmail.com"];
 
   app.post("/api/admin/auth/send", async (req, res) => {
     const { email } = req.body;
