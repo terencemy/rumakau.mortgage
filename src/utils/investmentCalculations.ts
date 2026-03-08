@@ -27,18 +27,18 @@ export function calculateInvestment(input: InvestmentCalculatorInput): Investmen
 
   // 3. Rental Yield
   const annualRental = monthlyRental * 12;
-  const rentalYield = (annualRental / propertyPrice) * 100;
+  const rentalYield = Math.round((annualRental / propertyPrice) * 100);
 
   // 4. Net Rental Yield
   const annualNetIncome = (monthlyRental - vacancyLoss - maintenanceFees - (propertyTax / 12) - (insurance / 12)) * 12;
-  const netRentalYield = (annualNetIncome / propertyPrice) * 100;
+  const netRentalYield = Math.round((annualNetIncome / propertyPrice) * 100);
 
   // 5. Total Cash Invested
   const totalCashInvested = downPayment + legalFees + renovationCost;
 
   // 6. ROI
   const annualNetProfit = netMonthlyCashFlow * 12;
-  const roi = (annualNetProfit / totalCashInvested) * 100;
+  const roi = Math.round((annualNetProfit / totalCashInvested) * 100);
 
   // 7. Risk Level
   let riskLevel: 'Low' | 'Moderate' | 'High' | 'Negative' = 'Low';
@@ -56,6 +56,7 @@ export function calculateInvestment(input: InvestmentCalculatorInput): Investmen
   smartScore += Math.min(30, (netRentalYield / 6) * 30); // Yield contributes up to 30
   smartScore += netMonthlyCashFlow > 0 ? 20 : 0; // Positive cash flow contributes 20
   smartScore += (loanAmount / propertyPrice) < 0.7 ? 20 : 10; // LTV contributes up to 20
+  smartScore = Math.round(smartScore);
 
   let recommendation = "Good investment";
   let verdict = "Strong rental investment";
