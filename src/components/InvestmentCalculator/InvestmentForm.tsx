@@ -211,7 +211,7 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
           className="group relative px-12 py-5 bg-slate-900 text-white rounded-2xl font-bold text-lg hover:bg-slate-800 transition-all shadow-2xl shadow-slate-200 disabled:opacity-50"
         >
           <span className="flex items-center gap-3">
-            {isLoading ? "Calculating..." : "Analyze Investment"}
+            {isLoading ? "Calculating..." : "Run ROI Check"}
             <Calculator className="group-hover:rotate-12 transition-transform" size={24} />
           </span>
         </button>

@@ -58,7 +58,7 @@ export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset })
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest">
                 <Sparkles size={12} /> Viral Deal Analyzer
               </div>
-              <h2 className="text-4xl md:text-5xl font-serif italic text-white">Investment Score: <span className="text-emerald-400">{result.smartScore}</span> <span className="text-white/30 text-2xl">/ 100</span></h2>
+              <h2 className="text-4xl md:text-5xl font-serif italic text-white">ROI Score: <span className="text-emerald-400">{result.smartScore}</span> <span className="text-white/30 text-2xl">/ 100</span></h2>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
@@ -137,7 +137,7 @@ export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset })
           icon={<Percent className="text-emerald-500" />}
         />
         <StatCard 
-          label="Smart Investment Score" 
+          label="Smart ROI Score" 
           value={result.smartScore.toString()}
           subValue={result.recommendation}
           icon={<ShieldCheck className="text-slate-900" />}
@@ -185,7 +185,7 @@ export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset })
         {/* Investment Score & Recommendation */}
         <div className="bg-slate-900 p-8 rounded-[2rem] shadow-xl text-white space-y-8">
           <div className="space-y-2">
-            <h3 className="text-xl font-serif italic">Investment Verdict</h3>
+            <h3 className="text-xl font-serif italic">ROI Verdict</h3>
             <p className="text-slate-400 text-sm">Based on Malaysia market benchmarks</p>
           </div>
 

@@ -83,7 +83,7 @@ export default function App() {
       contactType: contactInfo.type,
       contactValue: contactInfo.value,
       mainBorrowerName: "Investor Lead",
-      propertyAddress: "Investment Analysis",
+      propertyAddress: "ROI Check",
       propertyType: "Investment",
       spaPrice: investmentInput.propertyPrice,
       loanAmount: investmentInput.loanAmount,
@@ -154,7 +154,7 @@ export default function App() {
               onClick={() => switchTool('investment')}
               className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${activeTool === 'investment' ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' : 'text-slate-400 hover:text-slate-900'}`}
             >
-              <TrendingUp size={14} /> Investment
+              <TrendingUp size={14} /> ROI Check
             </button>
             <div className="h-4 w-[1px] bg-slate-200 mx-2" />
             <button 
@@ -179,7 +179,7 @@ export default function App() {
           onClick={() => switchTool('investment')}
           className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${activeTool === 'investment' ? 'bg-slate-900 text-white' : 'text-slate-400'}`}
         >
-          Investment
+          ROI Check
         </button>
       </div>
 
@@ -193,7 +193,7 @@ export default function App() {
             Calculate mortgage repayments, net rental income, and perform stress tests on interest rate hikes.
             Optimized for Malaysian property investors, real estate agents, and mortgage bankers.
           </p>
-          <h3>Investment Analysis Features:</h3>
+          <h3>ROI Check Features:</h3>
           <ul>
             <li>Rental Yield Calculator Malaysia: Gross and Net yield analysis.</li>
             <li>Property ROI Calculator: Calculate return on investment including legal fees and renovation.</li>
@@ -218,7 +218,7 @@ export default function App() {
                   {activeTool === 'mortgage' ? 'Gemini 3.0 Flash Analysis' : 'Professional Investment Engine'}
                 </div>
                 <h1 className="text-4xl md:text-5xl font-serif italic text-slate-900">
-                  {activeTool === 'mortgage' ? 'DSR Check' : 'Investment Analysis'}
+                  {activeTool === 'mortgage' ? 'DSR Check' : 'ROI Check'}
                 </h1>
                 <p className="text-slate-500 text-lg leading-relaxed">
                   {activeTool === 'mortgage' 
@@ -257,7 +257,7 @@ export default function App() {
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 no-print">
                 <div className="space-y-2">
                   <h2 className="text-3xl font-serif italic text-slate-900">
-                    {activeTool === 'mortgage' ? 'Risk Assessment Report' : 'Investment Performance Report'}
+                    {activeTool === 'mortgage' ? 'Risk Assessment Report' : 'ROI Performance Report'}
                   </h2>
                   <p className="text-slate-500">
                     {activeTool === 'mortgage' 
@@ -307,7 +307,7 @@ export default function App() {
           </p>
           <div className="flex flex-wrap justify-center gap-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
             <button onClick={() => switchTool('mortgage')} className="hover:text-slate-900 transition-colors">DSR Tool</button>
-            <button onClick={() => switchTool('investment')} className="hover:text-slate-900 transition-colors">Investment Tool</button>
+            <button onClick={() => switchTool('investment')} className="hover:text-slate-900 transition-colors">ROI Check Tool</button>
             <button 
               onClick={() => setIsAdminModalOpen(true)} 
               className="hover:text-slate-900 transition-colors opacity-20 hover:opacity-100"
