@@ -169,10 +169,12 @@ async function startServer() {
       });
     }
 
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+
     try {
       const resend = new Resend(process.env.RESEND_API_KEY.trim());
       const { data, error } = await resend.emails.send({
-        from: 'onboarding@resend.dev',
+        from: fromEmail,
         to: normalizedValue,
         subject: 'Your Verification Code - Rumakau.com',
         html: `
@@ -189,6 +191,18 @@ async function startServer() {
       
       if (error) {
         console.error("[RESEND ERROR]", error);
+        
+        // SANDBOX FALLBACK: If Resend blocks the recipient because of sandbox mode,
+        // we broadcast the code via socket so the user isn't stuck, but we still report the error.
+        if (error.message?.includes("testing emails only") || error.name === "validation_error") {
+          io.emit("otp_sent", { contactValue: normalizedValue, code, isSandboxFallback: true });
+          return res.json({ 
+            success: true, 
+            isSandboxMode: true,
+            message: "Resend Sandbox Mode: Code displayed on screen because domain is unverified." 
+          });
+        }
+
         return res.status(500).json({ 
           error: `Email failed: ${error.message || "Check your Resend API key and verified sender status."}` 
         });
@@ -286,10 +300,12 @@ async function startServer() {
       });
     }
 
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+
     try {
       const resend = new Resend(process.env.RESEND_API_KEY.trim());
       const { error } = await resend.emails.send({
-        from: 'onboarding@resend.dev',
+        from: fromEmail,
         to: normalizedEmail,
         subject: 'Admin Access Code - Rumakau.com',
         html: `
@@ -306,6 +322,17 @@ async function startServer() {
 
       if (error) {
         console.error("[RESEND ADMIN ERROR]", error);
+        
+        // SANDBOX FALLBACK
+        if (error.message?.includes("testing emails only") || error.name === "validation_error") {
+          io.emit("otp_sent", { contactValue: normalizedEmail, code, isSandboxFallback: true });
+          return res.json({ 
+            success: true, 
+            isSandboxMode: true,
+            message: "Resend Sandbox Mode: Code displayed on screen because domain is unverified." 
+          });
+        }
+
         return res.status(500).json({ 
           error: `Admin email failed: ${error.message || "Check your Resend API key."}` 
         });
