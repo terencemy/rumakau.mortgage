@@ -159,39 +159,40 @@ async function startServer() {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     otps.set(normalizedValue, code);
     
-    console.log(`[VERIFY] Sent ${code} to ${normalizedValue} via ${contactType}`);
+    console.log(`[VERIFY] Code generated for ${normalizedValue}`);
     
-    // 1. Broadcast via Socket.io (Live Simulation)
-    io.emit("otp_sent", { contactValue: normalizedValue, code, contactType });
-    
-    // 2. Attempt Real Email Delivery if Resend is configured
-    if (contactType === 'email' && process.env.RESEND_API_KEY) {
-      try {
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        const { data, error } = await resend.emails.send({
-          from: 'onboarding@resend.dev',
-          to: normalizedValue,
-          subject: 'Your Verification Code - Rumakau.com',
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-              <h2 style="color: #0f172a;">Security Verification</h2>
-              <p>Your verification code for Rumakau.com is:</p>
-              <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #059669; margin: 20px 0;">
-                ${code}
-              </div>
-              <p style="font-size: 12px; color: #64748b;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+    // 1. Check if Resend is configured
+    if (!process.env.RESEND_API_KEY) {
+      return res.status(500).json({ 
+        error: "Email service not configured. Please add RESEND_API_KEY to environment variables." 
+      });
+    }
+
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const { data, error } = await resend.emails.send({
+        from: 'onboarding@resend.dev',
+        to: normalizedValue,
+        subject: 'Your Verification Code - Rumakau.com',
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #0f172a;">Security Verification</h2>
+            <p>Your verification code for Rumakau.com is:</p>
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #059669; margin: 20px 0;">
+              ${code}
             </div>
-          `
-        });
-        
-        if (error) {
-          console.error("[RESEND ERROR] Failed to send email:", error);
-          // Don't fail the whole request if email fails, as we have socket.io fallback
-          // and console logging for the OTP.
-        }
-      } catch (error: any) {
-        console.error("[RESEND EXCEPTION] Exception in email delivery:", error);
+            <p style="font-size: 12px; color: #64748b;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+          </div>
+        `
+      });
+      
+      if (error) {
+        console.error("[RESEND ERROR]", error);
+        return res.status(500).json({ error: "Failed to send verification email. Please check your API key." });
       }
+    } catch (error: any) {
+      console.error("[RESEND EXCEPTION]", error);
+      return res.status(500).json({ error: "An error occurred while sending the verification email." });
     }
 
     res.json({ success: true, message: "Code sent successfully" });
@@ -273,32 +274,39 @@ async function startServer() {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     adminOtps.set(normalizedEmail, code);
     
-    console.log(`[ADMIN AUTH] Sent ${code} to ${normalizedEmail}`);
+    console.log(`[ADMIN AUTH] Code generated for ${normalizedEmail}`);
     
-    // Broadcast for dev/testing
-    io.emit("otp_sent", { contactValue: normalizedEmail, code, contactType: 'email' });
+    if (!process.env.RESEND_API_KEY) {
+      return res.status(500).json({ 
+        error: "Email service not configured. Please add RESEND_API_KEY to environment variables." 
+      });
+    }
 
-    if (process.env.RESEND_API_KEY) {
-      try {
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        await resend.emails.send({
-          from: 'onboarding@resend.dev',
-          to: normalizedEmail,
-          subject: 'Admin Access Code - Rumakau.com',
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-              <h2 style="color: #0f172a;">Admin Access Verification</h2>
-              <p>Your one-time access code for the Rumakau Admin Panel is:</p>
-              <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #2563eb; margin: 20px 0;">
-                ${code}
-              </div>
-              <p style="font-size: 12px; color: #64748b;">This code is for authorized personnel only. If you did not request this, please secure your account.</p>
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const { error } = await resend.emails.send({
+        from: 'onboarding@resend.dev',
+        to: normalizedEmail,
+        subject: 'Admin Access Code - Rumakau.com',
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #0f172a;">Admin Access Verification</h2>
+            <p>Your one-time access code for the Rumakau Admin Panel is:</p>
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #2563eb; margin: 20px 0;">
+              ${code}
             </div>
-          `
-        });
-      } catch (error: any) {
+            <p style="font-size: 12px; color: #64748b;">This code is for authorized personnel only. If you did not request this, please secure your account.</p>
+          </div>
+        `
+      });
+
+      if (error) {
         console.error("[RESEND ADMIN ERROR]", error);
+        return res.status(500).json({ error: "Failed to send admin verification email." });
       }
+    } catch (error: any) {
+      console.error("[RESEND ADMIN EXCEPTION]", error);
+      return res.status(500).json({ error: "An error occurred while sending the admin access code." });
     }
     
     res.json({ success: true });

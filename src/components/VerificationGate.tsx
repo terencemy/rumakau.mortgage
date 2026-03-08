@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, MessageSquare, ShieldCheck, ArrowRight, RefreshCw, CheckCircle2, Bell, Info } from 'lucide-react';
-import { io } from 'socket.io-client';
 
 interface Props {
   onVerified: (contactInfo: { type: 'email' | 'whatsapp', value: string }) => void;
@@ -16,7 +15,6 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
   const [timer, setTimer] = useState(60);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [simulatedCode, setSimulatedCode] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<{ 
     resend: { status: 'ready' | 'missing', preview?: string }
   }>({ 
@@ -31,21 +29,7 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
         resend: { status: data.hasResend ? 'ready' : 'missing', preview: data.resendPreview }
       }))
       .catch(() => {});
-
-    // Listen for simulated OTPs via socket
-    const socket = io();
-    socket.on('otp_sent', (data) => {
-      if (data.contactValue.toLowerCase() === value.toLowerCase()) {
-        setSimulatedCode(data.code);
-        // Auto-fill for convenience in dev mode if desired, 
-        // but showing a notification is better for "simulation" feel
-      }
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [value]);
+  }, []);
 
   useEffect(() => {
     let interval: any;
@@ -156,26 +140,6 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
               {error}
             </div>
           )}
-
-          <AnimatePresence>
-            {simulatedCode && step === 'otp' && (
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 p-4 bg-emerald-900 text-white rounded-2xl shadow-lg border border-emerald-500/30"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shrink-0">
-                    <Bell size={16} className="animate-bounce" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-300">Simulated Notification</div>
-                    <div className="text-sm font-bold">Your code is: <span className="text-xl tracking-[0.2em] ml-2">{simulatedCode}</span></div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
         <AnimatePresence mode="wait">
