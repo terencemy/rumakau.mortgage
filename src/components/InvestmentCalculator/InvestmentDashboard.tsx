@@ -178,7 +178,7 @@ export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset })
             <DetailItem label="Property Price" value={`RM ${input.propertyPrice.toLocaleString()}`} />
             <DetailItem label="Loan Repayment" value={`RM ${result.monthlyRepayment.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
             <DetailItem label="Total Invested" value={`RM ${result.totalCashInvested.toLocaleString()}`} />
-            <DetailItem label="LTV Ratio" value={`${((input.loanAmount / input.propertyPrice) * 100).toFixed(0)}%`} />
+            <DetailItem label="LTV Ratio" value={`${Math.round((input.loanAmount / input.propertyPrice) * 100)}%`} />
           </div>
         </div>
 
@@ -286,9 +286,33 @@ export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset })
           <ScenarioCard 
             title="Market Downturn" 
             impact1={`Rent -10%: RM ${result.scenarios.rentalDrop10.toFixed(0)}`}
-            impact2={`Appreciation: ${input.appreciationRate}%`}
+            impact2={`Appreciation: ${Math.round(input.appreciationRate)}%`}
             status={result.scenarios.rentalDrop10 > 0 ? "Safe" : "Critical"}
           />
+        </div>
+
+        <div className="pt-4 border-t border-slate-100">
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-6">Annual Appreciation Projections</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <ScenarioCard 
+              title="Conservative (2%)" 
+              impact1={`Value: RM ${(input.propertyPrice * 1.02).toLocaleString()}`}
+              impact2={`Gain: RM ${result.scenarios.appreciationConservative.toLocaleString()}`}
+              status="Growth"
+            />
+            <ScenarioCard 
+              title="Moderate (4%)" 
+              impact1={`Value: RM ${(input.propertyPrice * 1.04).toLocaleString()}`}
+              impact2={`Gain: RM ${result.scenarios.appreciationModerate.toLocaleString()}`}
+              status="Growth"
+            />
+            <ScenarioCard 
+              title="Optimistic (6%)" 
+              impact1={`Value: RM ${(input.propertyPrice * 1.06).toLocaleString()}`}
+              impact2={`Gain: RM ${result.scenarios.appreciationOptimistic.toLocaleString()}`}
+              status="Growth"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -327,13 +351,15 @@ const ScenarioCard = ({ title, impact1, impact2, status }: any) => (
   <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
     <div className="flex justify-between items-center">
       <h4 className="text-xs font-bold text-slate-900">{title}</h4>
-      <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${status === 'Safe' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+      <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+        status === 'Safe' || status === 'Growth' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+      }`}>
         {status}
       </span>
     </div>
     <div className="space-y-1">
-      <div className="text-[10px] text-slate-500 font-medium">{impact1} / mo</div>
-      <div className="text-[10px] text-slate-500 font-medium">{impact2} / mo</div>
+      <div className="text-[10px] text-slate-500 font-medium">{impact1} {status === 'Growth' ? '' : '/ mo'}</div>
+      <div className="text-[10px] text-slate-500 font-medium">{impact2} {status === 'Growth' ? '' : '/ mo'}</div>
     </div>
   </div>
 );

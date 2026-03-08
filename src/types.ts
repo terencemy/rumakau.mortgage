@@ -125,5 +125,8 @@ export interface InvestmentAnalysisResult {
     vacancy10: number;
     vacancy20: number;
     rentalDrop10: number;
+    appreciationConservative: number;
+    appreciationModerate: number;
+    appreciationOptimistic: number;
   };
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { InvestmentCalculatorInput } from '../../types';
-import { Calculator, TrendingUp, Home, Percent, Wallet, ShieldAlert } from 'lucide-react';
+import { Calculator, TrendingUp, Home, Percent, Wallet, ShieldAlert, Info } from 'lucide-react';
 
 interface Props {
   onSubmit: (data: InvestmentCalculatorInput) => void;
@@ -18,8 +18,8 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
     maintenanceFees: 300,
     propertyTax: 1200,
     insurance: 600,
-    vacancyRate: 5,
-    appreciationRate: 3,
+    vacancyRate: 8,
+    appreciationRate: 0,
     renovationCost: 20000,
     legalFees: 10000
   });
@@ -127,6 +127,17 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
                 name="vacancyRate" 
                 value={formData.vacancyRate} 
                 onChange={handleChange} 
+                tooltip={
+                  <div className="space-y-2">
+                    <p>Vacancy Rate (%) is the percentage of time a rental property is not occupied during a year.</p>
+                    <div className="p-2 bg-white/10 rounded-lg">
+                      <p className="font-bold mb-1">Example:</p>
+                      <p>If a property is empty 1 month out of 12 months, the vacancy rate is:</p>
+                      <p className="font-mono mt-1">(1 ÷ 12) × 100 = 8.33%</p>
+                    </div>
+                    <p className="text-emerald-400">This means the property is vacant 8.33% of the year and rented 91.67% of the time.</p>
+                  </div>
+                }
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -177,6 +188,17 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
               onChange={handleChange} 
               step="0.1"
               dark
+              tooltip={
+                <div className="space-y-2">
+                  <p>Expected Appreciation (%) is the estimated yearly increase in a property's value.</p>
+                  <div className="p-2 bg-white/10 rounded-lg">
+                    <p className="font-bold mb-1">Example:</p>
+                    <p>If a property costs RM500,000 and the expected appreciation is 4% per year, the value next year would be:</p>
+                    <p className="font-mono mt-1">RM500,000 × 1.04 = RM520,000</p>
+                  </div>
+                  <p className="text-emerald-400">This means the property value increases by RM20,000 in one year.</p>
+                </div>
+              }
             />
           </div>
         </div>
@@ -198,11 +220,24 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
   );
 };
 
-const InputField = ({ label, name, value, onChange, icon, step = "1", disabled = false, dark = false }: any) => (
+const InputField = ({ label, name, value, onChange, icon, step = "1", disabled = false, dark = false, tooltip }: any) => (
   <div className="space-y-2">
-    <label className={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-slate-400' : 'text-slate-400'}`}>
-      {label}
-    </label>
+    <div className="flex items-center gap-1.5">
+      <label className={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-slate-400' : 'text-slate-400'}`}>
+        {label}
+      </label>
+      {tooltip && (
+        <div className="group relative">
+          <Info size={12} className="text-slate-400 cursor-help hover:text-slate-600 transition-colors" />
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-900 text-white text-[10px] rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-xl pointer-events-none">
+            <div className="relative leading-relaxed">
+              {tooltip}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
     <div className="relative">
       {icon && (
         <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>

@@ -95,7 +95,10 @@ export function calculateInvestment(input: InvestmentCalculatorInput): Investmen
       interestPlus2: calculateScenarioCashFlow(interestRate + 2, vacancyRate),
       vacancy10: calculateScenarioCashFlow(interestRate, 10),
       vacancy20: calculateScenarioCashFlow(interestRate, 20),
-      rentalDrop10: calculateScenarioCashFlow(interestRate, vacancyRate, 0.9)
+      rentalDrop10: calculateScenarioCashFlow(interestRate, vacancyRate, 0.9),
+      appreciationConservative: propertyPrice * 0.02,
+      appreciationModerate: propertyPrice * 0.04,
+      appreciationOptimistic: propertyPrice * 0.06
     }
   };
 }
