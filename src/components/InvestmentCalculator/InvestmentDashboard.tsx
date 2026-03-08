@@ -251,9 +251,14 @@ export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset })
           </div>
 
           <div className="space-y-3 pt-4">
-            <button className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-bold text-sm hover:bg-emerald-600 transition-all flex items-center justify-center gap-2">
+            <a 
+              href="https://wa.me/60123632338?text=Hi%20Terence%2C%20I%E2%80%99ve%20just%20analyzed%20a%20property%20investment%20on%20Rumakau.com%20and%20would%20like%20to%20discuss%20the%20ROI%20and%20financing%20options."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-bold text-sm hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 no-print"
+            >
               <MessageSquare size={18} /> Contact Support
-            </button>
+            </a>
             <div className="flex gap-3">
               <button 
                 onClick={() => downloadInvestmentReport(result, input)}
