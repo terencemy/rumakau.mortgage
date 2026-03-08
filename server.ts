@@ -159,7 +159,8 @@ async function startServer() {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     otps.set(normalizedValue, code);
     
-    console.log(`[VERIFY] Code generated for ${normalizedValue}`);
+    // LOG CODE TO CONSOLE FOR DEVELOPER ACCESS
+    console.log(`\n--- [VERIFICATION CODE] ---\nTarget: ${normalizedValue}\nCode: ${code}\n---------------------------\n`);
     
     // 1. Check if Resend is configured
     if (!process.env.RESEND_API_KEY) {
@@ -169,7 +170,7 @@ async function startServer() {
     }
 
     try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
+      const resend = new Resend(process.env.RESEND_API_KEY.trim());
       const { data, error } = await resend.emails.send({
         from: 'onboarding@resend.dev',
         to: normalizedValue,
@@ -188,7 +189,9 @@ async function startServer() {
       
       if (error) {
         console.error("[RESEND ERROR]", error);
-        return res.status(500).json({ error: "Failed to send verification email. Please check your API key." });
+        return res.status(500).json({ 
+          error: `Email failed: ${error.message || "Check your Resend API key and verified sender status."}` 
+        });
       }
     } catch (error: any) {
       console.error("[RESEND EXCEPTION]", error);
@@ -274,7 +277,8 @@ async function startServer() {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     adminOtps.set(normalizedEmail, code);
     
-    console.log(`[ADMIN AUTH] Code generated for ${normalizedEmail}`);
+    // LOG CODE TO CONSOLE FOR DEVELOPER ACCESS
+    console.log(`\n--- [ADMIN ACCESS CODE] ---\nTarget: ${normalizedEmail}\nCode: ${code}\n---------------------------\n`);
     
     if (!process.env.RESEND_API_KEY) {
       return res.status(500).json({ 
@@ -283,7 +287,7 @@ async function startServer() {
     }
 
     try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
+      const resend = new Resend(process.env.RESEND_API_KEY.trim());
       const { error } = await resend.emails.send({
         from: 'onboarding@resend.dev',
         to: normalizedEmail,
@@ -302,7 +306,9 @@ async function startServer() {
 
       if (error) {
         console.error("[RESEND ADMIN ERROR]", error);
-        return res.status(500).json({ error: "Failed to send admin verification email." });
+        return res.status(500).json({ 
+          error: `Admin email failed: ${error.message || "Check your Resend API key."}` 
+        });
       }
     } catch (error: any) {
       console.error("[RESEND ADMIN EXCEPTION]", error);
