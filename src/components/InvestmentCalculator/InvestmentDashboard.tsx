@@ -6,9 +6,10 @@ import {
 } from 'recharts';
 import { 
   TrendingUp, TrendingDown, Wallet, Percent, ShieldCheck, 
-  AlertTriangle, Info, Download, Share2, MessageSquare, Sparkles 
+  AlertTriangle, Info, Download, Share2, MessageSquare, Sparkles, Check 
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { downloadInvestmentReport } from '../../utils/pdfGenerator';
 
 interface Props {
   result: InvestmentAnalysisResult;
@@ -17,6 +18,28 @@ interface Props {
 }
 
 export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset }) => {
+  const [isShared, setIsShared] = React.useState(false);
+
+  const handleShare = async () => {
+    const shareData = {
+      title: 'Rumakau ROI Check',
+      text: `I just analyzed a property deal on Rumakau.com! ROI Score: ${result.smartScore}/100. Check it out!`,
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setIsShared(true);
+        setTimeout(() => setIsShared(false), 2000);
+      }
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
+
   const cashFlowData = [
     { name: 'Rental', value: input.monthlyRental, color: '#10b981' },
     { name: 'Loan', value: -result.monthlyRepayment, color: '#f43f5e' },
@@ -227,11 +250,18 @@ export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset })
               <MessageSquare size={18} /> Speak to Mortgage Advisor
             </button>
             <div className="flex gap-3">
-              <button className="flex-1 py-3 bg-white/10 text-white rounded-xl text-xs font-bold hover:bg-white/20 transition-all flex items-center justify-center gap-2">
+              <button 
+                onClick={() => downloadInvestmentReport(result, input)}
+                className="flex-1 py-3 bg-white/10 text-white rounded-xl text-xs font-bold hover:bg-white/20 transition-all flex items-center justify-center gap-2"
+              >
                 <Download size={14} /> PDF Report
               </button>
-              <button className="flex-1 py-3 bg-white/10 text-white rounded-xl text-xs font-bold hover:bg-white/20 transition-all flex items-center justify-center gap-2">
-                <Share2 size={14} /> Share Link
+              <button 
+                onClick={handleShare}
+                className="flex-1 py-3 bg-white/10 text-white rounded-xl text-xs font-bold hover:bg-white/20 transition-all flex items-center justify-center gap-2"
+              >
+                {isShared ? <Check size={14} className="text-emerald-400" /> : <Share2 size={14} />}
+                {isShared ? 'Copied!' : 'Share Link'}
               </button>
             </div>
           </div>

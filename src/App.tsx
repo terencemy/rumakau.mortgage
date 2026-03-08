@@ -8,10 +8,10 @@ import { InvestmentDashboard } from './components/InvestmentCalculator/Investmen
 import { analyzeMortgage } from './components/services/gemini';
 import { calculateInvestment } from './utils/investmentCalculations';
 import { MortgageAnalysisRequest, MortgageAnalysisResult, InvestmentCalculatorInput, InvestmentAnalysisResult } from './types';
-import { ShieldCheck, Calculator, FileText, Sparkles, TrendingUp, Home, ChevronRight } from 'lucide-react';
+import { ShieldCheck, Calculator, FileText, Sparkles, TrendingUp, Home, ChevronRight, Share2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { downloadBNMGuidelines } from './utils/pdfGenerator';
+import { downloadBNMGuidelines, downloadMortgageReport, downloadInvestmentReport } from './utils/pdfGenerator';
 
 type ToolType = 'mortgage' | 'investment';
 type AppState = 'form' | 'verifying' | 'dashboard';
@@ -20,6 +20,7 @@ export default function App() {
   const [activeTool, setActiveTool] = useState<ToolType>('mortgage');
   const [state, setState] = useState<AppState>('form');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isShared, setIsShared] = useState(false);
   
   // Mortgage State
   const [analysisRequest, setAnalysisRequest] = useState<MortgageAnalysisRequest | null>(null);
@@ -113,6 +114,36 @@ export default function App() {
       }
     }
     setState('dashboard');
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: activeTool === 'mortgage' ? 'Rumakau Mortgage Analysis' : 'Rumakau ROI Check',
+      text: activeTool === 'mortgage' 
+        ? `I just analyzed my mortgage eligibility on Rumakau.com! Approval Probability: ${Math.round(analysisResult?.approvalProbability || 0)}%.`
+        : `I just analyzed a property deal on Rumakau.com! ROI Score: ${investmentResult?.smartScore}/100.`,
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setIsShared(true);
+        setTimeout(() => setIsShared(false), 2000);
+      }
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (activeTool === 'mortgage' && analysisResult && analysisRequest) {
+      downloadMortgageReport(analysisResult, analysisRequest);
+    } else if (activeTool === 'investment' && investmentResult && investmentInput) {
+      downloadInvestmentReport(investmentResult, investmentInput);
+    }
   };
 
   const resetApp = () => {
@@ -267,7 +298,14 @@ export default function App() {
                 </div>
                 <div className="flex gap-3">
                   <button 
-                    onClick={() => window.print()}
+                    onClick={handleShare}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-white transition-all flex items-center gap-2"
+                  >
+                    {isShared ? <Check size={16} className="text-emerald-500" /> : <Share2 size={16} />}
+                    {isShared ? 'Copied' : 'Share'}
+                  </button>
+                  <button 
+                    onClick={handleDownloadPDF}
                     className="px-6 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-white transition-all"
                   >
                     Download PDF
