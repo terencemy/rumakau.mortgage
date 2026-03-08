@@ -263,7 +263,7 @@ export const AnalysisDashboard: React.FC<Props> = ({ result, onReset }) => {
                 className="w-full flex items-center justify-center gap-2 bg-white text-slate-700 py-3 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all border border-slate-200 group no-print"
               >
                 <Languages size={16} className="text-emerald-500" />
-                Contact Support (WhatsApp)
+                Contact Support
               </a>
             </div>
             

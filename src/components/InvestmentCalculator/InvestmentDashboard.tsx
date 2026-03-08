@@ -252,7 +252,7 @@ export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset })
 
           <div className="space-y-3 pt-4">
             <button className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-bold text-sm hover:bg-emerald-600 transition-all flex items-center justify-center gap-2">
-              <MessageSquare size={18} /> Speak to Mortgage Advisor
+              <MessageSquare size={18} /> Contact Support
             </button>
             <div className="flex gap-3">
               <button 
