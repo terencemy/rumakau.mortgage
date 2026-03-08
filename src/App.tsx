@@ -8,7 +8,7 @@ import { InvestmentDashboard } from './components/InvestmentCalculator/Investmen
 import { analyzeMortgage } from './components/services/gemini';
 import { calculateInvestment } from './utils/investmentCalculations';
 import { MortgageAnalysisRequest, MortgageAnalysisResult, InvestmentCalculatorInput, InvestmentAnalysisResult } from './types';
-import { ShieldCheck, Calculator, FileText, Sparkles, TrendingUp, Home, ChevronRight, Share2, Check } from 'lucide-react';
+import { ShieldCheck, Calculator, FileText, Sparkles, TrendingUp, Home, ChevronRight, Share2, Check, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { downloadBNMGuidelines, downloadMortgageReport, downloadInvestmentReport } from './utils/pdfGenerator';
@@ -382,32 +382,61 @@ export default function App() {
         onClose={() => setIsAdminModalOpen(false)} 
       />
 
-      <footer className="border-t border-slate-200 py-12 mt-20 no-print">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-2 opacity-50">
-            <ShieldCheck size={18} />
-            <span className="text-xs font-bold uppercase tracking-widest">Bank-Grade Security</span>
+      <footer className="border-t border-slate-200 py-16 mt-20 no-print bg-slate-50/50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
+                  <ShieldCheck className="text-emerald-400" size={20} />
+                </div>
+                <span className="text-sm font-bold tracking-tight text-slate-900">Rumakau.com</span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed max-w-xs">
+                Malaysia's premier AI-powered mortgage structuring engine and property investment analysis platform. 
+                Helping investors and homeowners make data-driven decisions since 2024.
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Tools & Services</h4>
+              <ul className="space-y-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <li><button onClick={() => switchTool('mortgage')} className="hover:text-slate-900 transition-colors">DSR Eligibility Check</button></li>
+                <li><button onClick={() => switchTool('investment')} className="hover:text-slate-900 transition-colors">ROI Performance Analysis</button></li>
+                <li><button onClick={downloadBNMGuidelines} className="hover:text-slate-900 transition-colors">BNM Policy Guidelines</button></li>
+              </ul>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">Connect</h4>
+              <ul className="space-y-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <li>
+                  <a href="https://wa.me/60123632338" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors flex items-center gap-2">
+                    <MessageSquare size={14} /> WhatsApp Support
+                  </a>
+                </li>
+                <li>
+                  <button onClick={() => setIsAdminModalOpen(true)} className="hover:text-slate-900 transition-colors opacity-20 hover:opacity-100">
+                    Admin Portal
+                  </button>
+                </li>
+              </ul>
+            </div>
           </div>
-          <p className="text-xs text-slate-400 font-medium text-center md:text-left">
-            © 2026 Rumakau.com For professional use only. Data processed session-based.
-          </p>
-          <div className="flex flex-wrap justify-center gap-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
-            <button onClick={() => switchTool('mortgage')} className="hover:text-slate-900 transition-colors">DSR Tool</button>
-            <button onClick={() => switchTool('investment')} className="hover:text-slate-900 transition-colors">ROI Check Tool</button>
-            <button 
-              onClick={() => setIsAdminModalOpen(true)} 
-              className="hover:text-slate-900 transition-colors opacity-20 hover:opacity-100"
-            >
-              Admin
-            </button>
-            <a 
-              href="https://wa.me/60123632338" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="hover:text-slate-900 transition-colors"
-            >
-              Support
-            </a>
+
+          <div className="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-2 opacity-50">
+              <ShieldCheck size={18} />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Bank-Grade Security</span>
+            </div>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center md:text-left">
+              © 2026 Rumakau.com • Professional Mortgage AI • Kuala Lumpur, Malaysia
+            </p>
+            <div className="flex gap-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+              <span>Privacy</span>
+              <span>Terms</span>
+              <span>Cookies</span>
+            </div>
           </div>
         </div>
       </footer>

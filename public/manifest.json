@@ -1,21 +1,43 @@
 {
-  "name": "Rumakau Mortgage AI",
+  "name": "Rumakau Mortgage & Investment AI",
   "short_name": "Rumakau",
-  "description": "Malaysia Mortgage Risk & Structuring AI Engine",
+  "description": "Malaysia's leading Mortgage Risk & Structuring AI Engine and Property Investment Calculator.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F8FAFC",
   "theme_color": "#0F172A",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "en-MY",
   "icons": [
     {
       "src": "https://picsum.photos/seed/mortgage/192/192",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://picsum.photos/seed/mortgage/512/512",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "business", "utilities"],
+  "screenshots": [
+    {
+      "src": "https://picsum.photos/seed/rumakau-desktop/1280/720",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Rumakau Dashboard"
+    },
+    {
+      "src": "https://picsum.photos/seed/rumakau-mobile/720/1280",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Rumakau Mobile"
     }
   ]
 }

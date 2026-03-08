@@ -8,7 +8,7 @@
     <title>Rumakau.com | Malaysia Mortgage AI & Property Investment Calculator</title>
     <meta name="title" content="Rumakau.com | Malaysia Mortgage AI & Property Investment Calculator" />
     <meta name="description" content="Professional Malaysia mortgage DSR structuring engine and property investment calculator. Analyze rental yield, ROI, and loan eligibility with AI-powered insights for Malaysian property investors." />
-    <meta name="keywords" content="mortgage malaysia, dsr calculator malaysia, property investment calculator malaysia, rental yield calculator, property ROI malaysia, home loan eligibility, housing loan structuring, bank negara malaysia dsr guidelines, rumakau" />
+    <meta name="keywords" content="mortgage malaysia, dsr calculator malaysia, property investment calculator malaysia, rental yield calculator, property ROI malaysia, home loan eligibility, housing loan structuring, bank negara malaysia dsr guidelines, rumakau, property investment malaysia, real estate finance malaysia" />
     <meta name="author" content="Rumakau.com" />
     <meta name="language" content="English" />
     <meta name="geo.region" content="MY" />
@@ -21,6 +21,8 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://rumakau.com/" />
+    <meta property="og:site_name" content="Rumakau Mortgage AI" />
+    <meta property="og:locale" content="en_MY" />
     <meta property="og:title" content="Rumakau.com | Malaysia Mortgage AI & Property Investment Calculator" />
     <meta property="og:description" content="Professional Malaysia mortgage DSR structuring engine and property investment calculator. Analyze rental yield, ROI, and loan eligibility with AI-powered insights." />
     <meta property="og:image" content="https://picsum.photos/seed/mortgage-ai/1200/630" />
@@ -31,12 +33,17 @@
     <meta property="twitter:title" content="Rumakau.com | Malaysia Mortgage AI & Property Investment Calculator" />
     <meta property="twitter:description" content="Professional Malaysia mortgage DSR structuring engine and property investment calculator." />
     <meta property="twitter:image" content="https://picsum.photos/seed/mortgage-ai/1200/630" />
+    <meta name="twitter:site" content="@rumakau" />
+    <meta name="twitter:creator" content="@rumakau" />
 
     <!-- AI & Search Engine Optimization -->
     <link rel="canonical" href="https://rumakau.com/" />
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="ai-content-detector" content="true" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0F172A" />
+    <link rel="icon" type="image/png" href="https://picsum.photos/seed/mortgage/32/32" />
+    <link rel="apple-touch-icon" href="https://picsum.photos/seed/mortgage/180/180" />
     
     <!-- Structured Data for AI Crawlers -->
     <script type="application/ld+json">
@@ -48,6 +55,7 @@
           "operatingSystem": "Web",
           "applicationCategory": "FinanceApplication",
           "description": "Malaysia Mortgage Risk & Structuring AI Engine and Property Investment Calculator. Automated DSR calculation, rental yield, and ROI analysis.",
+          "url": "https://rumakau.com/",
           "offers": {
             "@type": "Offer",
             "price": "0",
@@ -57,6 +65,11 @@
             "@type": "AggregateRating",
             "ratingValue": "4.9",
             "ratingCount": "1250"
+          },
+          "author": {
+            "@type": "Organization",
+            "name": "Rumakau.com",
+            "url": "https://rumakau.com/"
           }
         },
         {
@@ -69,7 +82,32 @@
             "@type": "PostalAddress",
             "addressLocality": "Kuala Lumpur",
             "addressCountry": "MY"
-          }
+          },
+          "areaServed": "Malaysia"
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://rumakau.com/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "DSR Check",
+              "item": "https://rumakau.com/?tool=mortgage"
+            },
+            {
+              "@type": "ListItem",
+              "position": 3,
+              "name": "ROI Check",
+              "item": "https://rumakau.com/?tool=investment"
+            }
+          ]
         },
         {
           "@context": "https://schema.org",
@@ -89,6 +127,14 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "Rumakau AI analyzes borrower profiles against Bank Negara Malaysia guidelines to identify risk flags and suggest loan structuring strategies for better approval rates."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is a good rental yield in Malaysia?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "In Malaysia, a gross rental yield of 4-5% is considered average, while 6% and above is considered strong for residential properties."
               }
             }
           ]

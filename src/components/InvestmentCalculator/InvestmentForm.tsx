@@ -251,6 +251,7 @@ const InputField = ({ label, name, value, onChange, icon, step = "1", disabled =
         onChange={onChange}
         step={step}
         disabled={disabled}
+        aria-label={label}
         className={`w-full ${icon ? 'pl-12' : 'px-4'} py-4 rounded-2xl text-sm font-bold outline-none transition-all ${
           dark 
             ? 'bg-white/5 border border-white/10 text-white focus:bg-white/10 focus:border-emerald-500/50' 
