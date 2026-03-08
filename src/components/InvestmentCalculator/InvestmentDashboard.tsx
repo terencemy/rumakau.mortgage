@@ -64,7 +64,7 @@ export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset })
             <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
               <div className="space-y-1">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rental Yield</div>
-                <div className="text-2xl font-bold text-white">{result.rentalYield.toFixed(1)}%</div>
+                <div className="text-2xl font-bold text-white">{Math.round(result.rentalYield)}%</div>
               </div>
               <div className="space-y-1">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cash Flow</div>
@@ -125,15 +125,15 @@ export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset })
         />
         <StatCard 
           label="Annual ROI" 
-          value={`${result.roi.toFixed(2)}%`}
+          value={`${Math.round(result.roi)}%`}
           subValue={`RM ${(result.netMonthlyCashFlow * 12).toLocaleString()} / year`}
           icon={<TrendingUp className="text-indigo-500" />}
           trend={result.roi > 5 ? "up" : "down"}
         />
         <StatCard 
           label="Net Rental Yield" 
-          value={`${result.netRentalYield.toFixed(2)}%`}
-          subValue={`Gross: ${result.rentalYield.toFixed(2)}%`}
+          value={`${Math.round(result.netRentalYield)}%`}
+          subValue={`Gross: ${Math.round(result.rentalYield)}%`}
           icon={<Percent className="text-emerald-500" />}
         />
         <StatCard 

@@ -169,7 +169,7 @@ async function startServer() {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         const { data, error } = await resend.emails.send({
-          from: 'verify@rumakau.com',
+          from: 'onboarding@resend.dev',
           to: normalizedValue,
           subject: 'Your Verification Code - Rumakau.com',
           html: `
@@ -282,7 +282,7 @@ async function startServer() {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         await resend.emails.send({
-          from: 'admin@rumakau.com',
+          from: 'onboarding@resend.dev',
           to: normalizedEmail,
           subject: 'Admin Access Code - Rumakau.com',
           html: `

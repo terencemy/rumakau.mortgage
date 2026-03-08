@@ -211,13 +211,13 @@ export const AdminLeadsTable: React.FC<Props> = ({ email, token, onClose }) => {
                           ? (lead.roi > 5 ? 'text-emerald-600' : 'text-rose-500')
                           : (lead.combinedDsr > 70 ? 'text-rose-500' : 'text-emerald-600')
                       }`}>
-                        {lead.leadType === 'investment' ? `${lead.roi.toFixed(2)}% ROI` : `${lead.combinedDsr}% DSR`}
+                        {lead.leadType === 'investment' ? `${Math.round(lead.roi)}% ROI` : `${Math.round(lead.combinedDsr)}% DSR`}
                       </div>
                     </div>
 
                     <div className="md:col-span-2 flex justify-center">
                       <div className="flex flex-col items-center">
-                        <div className="text-xs font-bold text-slate-900">{lead.approvalProbability}%</div>
+                        <div className="text-xs font-bold text-slate-900">{Math.round(lead.approvalProbability)}%</div>
                         <div className="text-[10px] text-slate-400 uppercase tracking-wider">Approval</div>
                       </div>
                     </div>
@@ -248,7 +248,7 @@ export const AdminLeadsTable: React.FC<Props> = ({ email, token, onClose }) => {
                             <div className="space-y-2">
                               <DetailRow label={lead.leadType === 'investment' ? "Net Cash Flow" : "Net Income (Main)"} value={`RM ${lead.netMonthlyIncomeMain.toLocaleString()}`} />
                               {lead.leadType === 'investment' ? (
-                                <DetailRow label="Annual ROI" value={`${lead.roi.toFixed(2)}%`} />
+                                <DetailRow label="Annual ROI" value={`${Math.round(lead.roi)}%`} />
                               ) : (
                                 <DetailRow label="Net Income (Joint)" value={lead.netMonthlyIncomeJoint ? `RM ${lead.netMonthlyIncomeJoint.toLocaleString()}` : '-'} />
                               )}

@@ -46,7 +46,7 @@ export const AnalysisDashboard: React.FC<Props> = ({ result, onReset }) => {
             <TrendingUp size={16} className="text-slate-400" />
           </div>
           <div className="text-4xl font-serif italic text-slate-800">
-            {result.dsrCombined}%
+            {Math.round(result.dsrCombined)}%
           </div>
           <div className="mt-2 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
             <div 
@@ -56,8 +56,8 @@ export const AnalysisDashboard: React.FC<Props> = ({ result, onReset }) => {
           </div>
           {result.isJointApplication && (
             <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between text-[10px] font-bold uppercase tracking-wider">
-              <div className="text-slate-400">Main: <span className="text-slate-600">{result.dsrMain}%</span></div>
-              <div className="text-slate-400">Joint: <span className="text-slate-600">{result.dsrJoint}%</span></div>
+              <div className="text-slate-400">Main: <span className="text-slate-600">{Math.round(result.dsrMain)}%</span></div>
+              <div className="text-slate-400">Joint: <span className="text-slate-600">{result.dsrJoint ? Math.round(result.dsrJoint) : 0}%</span></div>
             </div>
           )}
         </motion.div>
@@ -91,7 +91,7 @@ export const AnalysisDashboard: React.FC<Props> = ({ result, onReset }) => {
             <Target size={16} className="text-slate-400" />
           </div>
           <div className="text-4xl font-serif italic text-slate-800">
-            {result.approvalProbability}%
+            {Math.round(result.approvalProbability)}%
           </div>
           <div className="mt-2 text-[10px] text-slate-400 font-bold uppercase">
             Based on Profile Strength
