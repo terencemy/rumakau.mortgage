@@ -3,23 +3,35 @@ import { MortgageForm } from './components/MortgageForm';
 import { AnalysisDashboard } from './components/AnalysisDashboard';
 import { VerificationGate } from './components/VerificationGate';
 import { AdminAuthModal } from './components/AdminAuthModal';
+import { InvestmentForm } from './components/InvestmentCalculator/InvestmentForm';
+import { InvestmentDashboard } from './components/InvestmentCalculator/InvestmentDashboard';
 import { analyzeMortgage } from './components/services/gemini';
-import { MortgageAnalysisRequest, MortgageAnalysisResult } from './types';
-import { ShieldCheck, Calculator, FileText, Sparkles } from 'lucide-react';
+import { calculateInvestment } from './utils/investmentCalculations';
+import { MortgageAnalysisRequest, MortgageAnalysisResult, InvestmentCalculatorInput, InvestmentAnalysisResult } from './types';
+import { ShieldCheck, Calculator, FileText, Sparkles, TrendingUp, Home, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { downloadBNMGuidelines } from './utils/pdfGenerator';
 
+type ToolType = 'mortgage' | 'investment';
 type AppState = 'form' | 'verifying' | 'dashboard';
 
 export default function App() {
+  const [activeTool, setActiveTool] = useState<ToolType>('mortgage');
   const [state, setState] = useState<AppState>('form');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // Mortgage State
   const [analysisRequest, setAnalysisRequest] = useState<MortgageAnalysisRequest | null>(null);
   const [analysisResult, setAnalysisResult] = useState<MortgageAnalysisResult | null>(null);
+  
+  // Investment State
+  const [investmentInput, setInvestmentInput] = useState<InvestmentCalculatorInput | null>(null);
+  const [investmentResult, setInvestmentResult] = useState<InvestmentAnalysisResult | null>(null);
+  
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
-  const handleFormSubmit = async (data: MortgageAnalysisRequest) => {
+  const handleMortgageSubmit = async (data: MortgageAnalysisRequest) => {
     setIsAnalyzing(true);
     try {
       const result = await analyzeMortgage(data);
@@ -28,44 +40,73 @@ export default function App() {
       setState('verifying');
     } catch (error: any) {
       console.error("Analysis failed:", error);
-      let msg = error.message || "Please check your connection and try again.";
-      if (msg.includes("API key not valid")) {
-        msg = "The AI service is reporting an invalid API key. Please ensure the 'Generative Language API' is enabled in your Google AI Studio settings for this key.";
-      } else if (msg.includes("not found")) {
-        msg = "The AI model is currently unavailable or the API version is mismatched. Please try again in a few minutes.";
-      }
-      alert(`Analysis failed: ${msg}`);
+      alert(`Analysis failed: ${error.message}`);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
+  const handleInvestmentSubmit = (data: InvestmentCalculatorInput) => {
+    setIsAnalyzing(true);
+    setTimeout(() => {
+      const result = calculateInvestment(data);
+      setInvestmentInput(data);
+      setInvestmentResult(result);
+      setState('verifying');
+      setIsAnalyzing(false);
+    }, 1500);
+  };
+
   const handleVerified = async (contactInfo: { type: 'email', value: string }) => {
     // Capture lead
-    if (analysisRequest && analysisResult) {
+    const leadData = activeTool === 'mortgage' && analysisRequest && analysisResult ? {
+      contactType: contactInfo.type,
+      contactValue: contactInfo.value,
+      mainBorrowerName: analysisRequest.mainBorrower.name,
+      propertyAddress: analysisRequest.property.address,
+      propertyType: analysisRequest.property.propertyType,
+      spaPrice: analysisRequest.property.spaPrice,
+      loanAmount: analysisRequest.property.loanAmount,
+      dsrMain: analysisResult.dsrMain,
+      dsrJoint: analysisResult.dsrJoint,
+      combinedDsr: analysisResult.dsrCombined,
+      netMonthlyIncomeMain: analysisResult.netMonthlyIncomeMain,
+      netMonthlyIncomeJoint: analysisResult.netMonthlyIncomeJoint,
+      stressTestInstallment: analysisResult.stressTestInstallment,
+      approvalProbability: analysisResult.approvalProbability,
+      bankCategory: analysisResult.bankCategory,
+      riskGrade: analysisResult.riskGrade,
+      leadType: 'mortgage',
+      roi: 0,
+      timestamp: new Date().toISOString()
+    } : activeTool === 'investment' && investmentInput && investmentResult ? {
+      contactType: contactInfo.type,
+      contactValue: contactInfo.value,
+      mainBorrowerName: "Investor Lead",
+      propertyAddress: "Investment Analysis",
+      propertyType: "Investment",
+      spaPrice: investmentInput.propertyPrice,
+      loanAmount: investmentInput.loanAmount,
+      dsrMain: 0,
+      dsrJoint: 0,
+      combinedDsr: 0,
+      netMonthlyIncomeMain: investmentResult.netMonthlyCashFlow,
+      netMonthlyIncomeJoint: 0,
+      stressTestInstallment: investmentResult.monthlyRepayment,
+      approvalProbability: investmentResult.smartScore,
+      bankCategory: investmentResult.riskLevel,
+      riskGrade: "INV",
+      leadType: 'investment',
+      roi: investmentResult.roi,
+      timestamp: new Date().toISOString()
+    } : null;
+
+    if (leadData) {
       try {
         await fetch('/api/leads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contactType: contactInfo.type,
-            contactValue: contactInfo.value,
-            mainBorrowerName: analysisRequest.mainBorrower.name,
-            propertyAddress: analysisRequest.property.address,
-            propertyType: analysisRequest.property.propertyType,
-            spaPrice: analysisRequest.property.spaPrice,
-            loanAmount: analysisRequest.property.loanAmount,
-            dsrMain: analysisResult.dsrMain,
-            dsrJoint: analysisResult.dsrJoint,
-            combinedDsr: analysisResult.dsrCombined,
-            netMonthlyIncomeMain: analysisResult.netMonthlyIncomeMain,
-            netMonthlyIncomeJoint: analysisResult.netMonthlyIncomeJoint,
-            stressTestInstallment: analysisResult.stressTestInstallment,
-            approvalProbability: analysisResult.approvalProbability,
-            bankCategory: analysisResult.bankCategory,
-            riskGrade: analysisResult.riskGrade,
-            timestamp: new Date().toISOString()
-          })
+          body: JSON.stringify(leadData)
         });
       } catch (e) {
         console.error("Failed to capture lead:", e);
@@ -78,6 +119,13 @@ export default function App() {
     setState('form');
     setAnalysisRequest(null);
     setAnalysisResult(null);
+    setInvestmentInput(null);
+    setInvestmentResult(null);
+  };
+
+  const switchTool = (tool: ToolType) => {
+    setActiveTool(tool);
+    resetApp();
   };
 
   return (
@@ -91,52 +139,74 @@ export default function App() {
             </div>
             <div>
               <div className="text-sm font-bold tracking-tight text-slate-900">Rumakau.com</div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Risk & Structuring Engine</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Mortgage & Investment AI</p>
             </div>
           </div>
           
-          <div className="hidden md:flex items-center gap-8">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-              <Calculator size={14} />
-              DSR Calculator
-            </div>
+          <div className="hidden md:flex items-center gap-4">
+            <button 
+              onClick={() => switchTool('mortgage')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${activeTool === 'mortgage' ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' : 'text-slate-400 hover:text-slate-900'}`}
+            >
+              <Calculator size={14} /> DSR Check
+            </button>
+            <button 
+              onClick={() => switchTool('investment')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${activeTool === 'investment' ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' : 'text-slate-400 hover:text-slate-900'}`}
+            >
+              <TrendingUp size={14} /> Investment
+            </button>
+            <div className="h-4 w-[1px] bg-slate-200 mx-2" />
             <button 
               onClick={downloadBNMGuidelines}
               className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
             >
-              <FileText size={14} />
-              Policy Check
+              <FileText size={14} /> Policy
             </button>
           </div>
         </div>
       </nav>
 
+      {/* Mobile Tool Switcher */}
+      <div className="md:hidden flex p-2 bg-white border-b border-slate-100 no-print">
+        <button 
+          onClick={() => switchTool('mortgage')}
+          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${activeTool === 'mortgage' ? 'bg-slate-900 text-white' : 'text-slate-400'}`}
+        >
+          DSR Check
+        </button>
+        <button 
+          onClick={() => switchTool('investment')}
+          className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${activeTool === 'investment' ? 'bg-slate-900 text-white' : 'text-slate-400'}`}
+        >
+          Investment
+        </button>
+      </div>
+
       <main className="max-w-7xl mx-auto px-6 py-12">
         {/* Hidden SEO Content for AI Crawlers */}
         <section className="sr-only">
-          <h2>About Rumakau Mortgage AI Engine</h2>
+          <h2>Rumakau: Malaysia's Advanced Mortgage AI & Investment Calculator</h2>
           <p>
-            Rumakau is a specialized AI-powered platform for the Malaysian mortgage market. 
-            It provides automated Debt Service Ratio (DSR) calculations based on Bank Negara Malaysia (BNM) guidelines.
-            Our engine helps bankers and real estate agents analyze borrower risk profiles, 
-            identify potential loan rejection flags, and structure housing loans for better approval probability.
-            Key features include stress test installment analysis, net income verification, 
-            and automated risk grading (A to F).
+            Rumakau.com offers professional tools for the Malaysian property market. 
+            Our Property Investment Calculator helps investors evaluate rental yield, ROI, and cash flow.
+            Calculate mortgage repayments, net rental income, and perform stress tests on interest rate hikes.
+            Optimized for Malaysian property investors, real estate agents, and mortgage bankers.
           </p>
+          <h3>Investment Analysis Features:</h3>
+          <ul>
+            <li>Rental Yield Calculator Malaysia: Gross and Net yield analysis.</li>
+            <li>Property ROI Calculator: Calculate return on investment including legal fees and renovation.</li>
+            <li>Cash Flow Analysis: Monthly net profit after all expenses.</li>
+            <li>Stress Test Scenarios: Interest rate and vacancy risk simulation.</li>
+            <li>Smart Investment Score: Automated deal grading.</li>
+          </ul>
         </section>
-
-        {/* Print-only Footer for PDF Export */}
-        <div className="hidden print:block fixed bottom-0 left-0 right-0 text-center py-8 border-t border-slate-100 bg-white z-[100]">
-          <p className="text-[10px] text-slate-400 font-medium max-w-2xl mx-auto leading-relaxed">
-            © 2026 Rumakau.com. All rights reserved. This platform is intended for professional use. 
-            For further assistance with mortgage applications, please contact our support team.
-          </p>
-        </div>
 
         <AnimatePresence mode="wait">
           {state === 'form' && (
             <motion.div
-              key="form"
+              key={`${activeTool}-form`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -145,18 +215,23 @@ export default function App() {
               <div className="text-center max-w-2xl mx-auto space-y-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
                   <Sparkles size={12} />
-                  Powered by Gemini 3.0 Flash
+                  {activeTool === 'mortgage' ? 'Gemini 3.0 Flash Analysis' : 'Professional Investment Engine'}
                 </div>
                 <h1 className="text-4xl md:text-5xl font-serif italic text-slate-900">
-                  DSR Check
+                  {activeTool === 'mortgage' ? 'DSR Check' : 'Investment Analysis'}
                 </h1>
                 <p className="text-slate-500 text-lg leading-relaxed">
-                  Advanced structuring engine for Malaysian property loans. 
-                  Analyze DSR, identify risk flags, and generate client-ready strategies in seconds.
+                  {activeTool === 'mortgage' 
+                    ? 'Advanced structuring engine for Malaysian property loans. Analyze DSR and generate client-ready strategies.'
+                    : 'Evaluate rental profitability, ROI, and cash flow for Malaysian properties. Make data-driven investment decisions.'}
                 </p>
               </div>
 
-              <MortgageForm onSubmit={handleFormSubmit} isAnalyzing={isAnalyzing} />
+              {activeTool === 'mortgage' ? (
+                <MortgageForm onSubmit={handleMortgageSubmit} isAnalyzing={isAnalyzing} />
+              ) : (
+                <InvestmentForm onSubmit={handleInvestmentSubmit} isLoading={isAnalyzing} />
+              )}
             </motion.div>
           )}
 
@@ -172,17 +247,23 @@ export default function App() {
             </motion.div>
           )}
 
-          {state === 'dashboard' && analysisResult && (
+          {state === 'dashboard' && (
             <motion.div
-              key="dashboard"
+              key={`${activeTool}-dashboard`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="space-y-8"
             >
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 no-print">
                 <div className="space-y-2">
-                  <h2 className="text-3xl font-serif italic text-slate-900">Risk Assessment Report</h2>
-                  <p className="text-slate-500">Generated for {analysisRequest?.mainBorrower.name}</p>
+                  <h2 className="text-3xl font-serif italic text-slate-900">
+                    {activeTool === 'mortgage' ? 'Risk Assessment Report' : 'Investment Performance Report'}
+                  </h2>
+                  <p className="text-slate-500">
+                    {activeTool === 'mortgage' 
+                      ? `Generated for ${analysisRequest?.mainBorrower.name}` 
+                      : `Analysis for RM ${investmentInput?.propertyPrice.toLocaleString()} Property`}
+                  </p>
                 </div>
                 <div className="flex gap-3">
                   <button 
@@ -199,7 +280,12 @@ export default function App() {
                   </button>
                 </div>
               </div>
-              <AnalysisDashboard result={analysisResult} onReset={resetApp} />
+              
+              {activeTool === 'mortgage' && analysisResult ? (
+                <AnalysisDashboard result={analysisResult} onReset={resetApp} />
+              ) : investmentResult && investmentInput ? (
+                <InvestmentDashboard result={investmentResult} input={investmentInput} onReset={resetApp} />
+              ) : null}
             </motion.div>
           )}
         </AnimatePresence>
@@ -216,21 +302,20 @@ export default function App() {
             <ShieldCheck size={18} />
             <span className="text-xs font-bold uppercase tracking-widest">Bank-Grade Security</span>
           </div>
-          <p className="text-xs text-slate-400 font-medium">
+          <p className="text-xs text-slate-400 font-medium text-center md:text-left">
             © 2026 Rumakau.com For professional use only. Data processed session-based.
           </p>
-          <div className="flex gap-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
-            <button onClick={downloadBNMGuidelines} className="hover:text-slate-900 transition-colors">BNM Guidelines</button>
+          <div className="flex flex-wrap justify-center gap-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
+            <button onClick={() => switchTool('mortgage')} className="hover:text-slate-900 transition-colors">DSR Tool</button>
+            <button onClick={() => switchTool('investment')} className="hover:text-slate-900 transition-colors">Investment Tool</button>
             <button 
               onClick={() => setIsAdminModalOpen(true)} 
               className="hover:text-slate-900 transition-colors opacity-20 hover:opacity-100"
             >
               Admin
             </button>
-            <a href="#" className="hover:text-slate-900 transition-colors">Privacy</a>
-            <a href="#" className="hover:text-slate-900 transition-colors">Terms</a>
             <a 
-              href="https://wa.me/60123632338?text=Hi%20Terence%2C%20I%E2%80%99m%20planning%20to%20purchase%20a%20property%20and%20would%20like%20to%20check%20my%20home%20loan%20eligibility.%20Could%20you%20assist%20me%20with%20the%20mortgage%20application%3F" 
+              href="https://wa.me/60123632338" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="hover:text-slate-900 transition-colors"

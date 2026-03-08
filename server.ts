@@ -31,6 +31,10 @@ try {
       contactType TEXT,
       contactValue TEXT,
       mainBorrowerName TEXT,
+      propertyAddress TEXT,
+      propertyType TEXT,
+      spaPrice REAL,
+      loanAmount REAL,
       dsrMain REAL,
       dsrJoint REAL,
       combinedDsr REAL,
@@ -39,19 +43,22 @@ try {
       stressTestInstallment REAL,
       approvalProbability REAL,
       bankCategory TEXT,
-      riskGrade TEXT
+      riskGrade TEXT,
+      leadType TEXT,
+      roi REAL
     )
   `);
 
-  // Add new columns if they don't exist (for existing databases)
-  try {
-    db.exec("ALTER TABLE leads ADD COLUMN propertyAddress TEXT");
-    db.exec("ALTER TABLE leads ADD COLUMN propertyType TEXT");
-    db.exec("ALTER TABLE leads ADD COLUMN spaPrice REAL");
-    db.exec("ALTER TABLE leads ADD COLUMN loanAmount REAL");
-  } catch (e) {
-    // Columns likely already exist
-  }
+  // Add new columns if they don't exist (for backward compatibility with existing databases)
+  const columns = db.prepare("PRAGMA table_info(leads)").all();
+  const columnNames = (columns as any[]).map(c => c.name);
+  
+  if (!columnNames.includes('propertyAddress')) db.exec("ALTER TABLE leads ADD COLUMN propertyAddress TEXT");
+  if (!columnNames.includes('propertyType')) db.exec("ALTER TABLE leads ADD COLUMN propertyType TEXT");
+  if (!columnNames.includes('spaPrice')) db.exec("ALTER TABLE leads ADD COLUMN spaPrice REAL");
+  if (!columnNames.includes('loanAmount')) db.exec("ALTER TABLE leads ADD COLUMN loanAmount REAL");
+  if (!columnNames.includes('leadType')) db.exec("ALTER TABLE leads ADD COLUMN leadType TEXT");
+  if (!columnNames.includes('roi')) db.exec("ALTER TABLE leads ADD COLUMN roi REAL");
   console.log(`[DB] Database initialized at ${dbPath}`);
 } catch (error) {
   console.error("[DB ERROR] Failed to initialize database:", error);
@@ -178,15 +185,12 @@ async function startServer() {
         });
         
         if (error) {
-          console.error("[RESEND ERROR]", error);
-          return res.status(500).json({ 
-            success: false, 
-            error: `Email service error: ${error.message || 'Unknown error'}.` 
-          });
+          console.error("[RESEND ERROR] Failed to send email:", error);
+          // Don't fail the whole request if email fails, as we have socket.io fallback
+          // and console logging for the OTP.
         }
       } catch (error: any) {
-        console.error("[RESEND EXCEPTION]", error);
-        return res.status(500).json({ success: false, error: `Server exception: ${error.message}` });
+        console.error("[RESEND EXCEPTION] Exception in email delivery:", error);
       }
     }
 
@@ -217,7 +221,7 @@ async function startServer() {
       dsrMain, dsrJoint, combinedDsr, 
       netMonthlyIncomeMain, netMonthlyIncomeJoint, 
       stressTestInstallment, approvalProbability, 
-      bankCategory, riskGrade 
+      bankCategory, riskGrade, leadType, roi 
     } = req.body;
     
     if (!db) {
@@ -233,9 +237,9 @@ async function startServer() {
           dsrMain, dsrJoint, combinedDsr, 
           netMonthlyIncomeMain, netMonthlyIncomeJoint, 
           stressTestInstallment, approvalProbability, 
-          bankCategory, riskGrade
+          bankCategory, riskGrade, leadType, roi
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       stmt.run(
         timestamp, contactType, contactValue, mainBorrowerName, 
@@ -243,7 +247,7 @@ async function startServer() {
         dsrMain, dsrJoint, combinedDsr, 
         netMonthlyIncomeMain, netMonthlyIncomeJoint, 
         stressTestInstallment, approvalProbability, 
-        bankCategory, riskGrade
+        bankCategory, riskGrade, leadType, roi
       );
       console.log("[LEAD] Saved to DB:", req.body);
       res.json({ success: true });
@@ -375,7 +379,7 @@ async function startServer() {
         "DSR Main (%)", "DSR Joint (%)", "Combined DSR (%)", 
         "Net Income Main (RM)", "Net Income Joint (RM)", 
         "Stress Test Installment (RM)", "Approval Prob (%)", 
-        "Bank Category", "Risk Grade"
+        "Bank Category", "Risk Grade", "Lead Type", "ROI (%)"
       ];
       const rows = (leads as any[]).map(l => [
         l.id,
@@ -395,7 +399,9 @@ async function startServer() {
         l.stressTestInstallment,
         l.approvalProbability,
         l.bankCategory,
-        l.riskGrade
+        l.riskGrade,
+        l.leadType || 'mortgage',
+        l.roi || 0
       ]);
 
       const csvContent = [
@@ -466,7 +472,12 @@ async function startServer() {
       // Retry logic for 503 errors and model fallback for 404 errors
       let attempts = 0;
       let response: any;
-      const modelsToTry = ["gemini-3-flash-preview", "gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash-latest"];
+      const modelsToTry = [
+        "gemini-3-flash-preview", 
+        "gemini-3.1-flash-lite-preview", 
+        "gemini-flash-latest", 
+        "gemini-1.5-flash-latest"
+      ];
       let currentModelIndex = 0;
 
       while (attempts < 5 && currentModelIndex < modelsToTry.length) {

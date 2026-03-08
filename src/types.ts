@@ -91,3 +91,39 @@ export interface LeadRecord {
   dsrCombined: number;
   riskGrade: string;
 }
+
+export interface InvestmentCalculatorInput {
+  propertyPrice: number;
+  downPayment: number;
+  loanAmount: number;
+  interestRate: number;
+  tenure: number;
+  monthlyRental: number;
+  maintenanceFees: number;
+  propertyTax: number;
+  insurance: number;
+  vacancyRate: number;
+  appreciationRate: number;
+  renovationCost: number;
+  legalFees: number;
+}
+
+export interface InvestmentAnalysisResult {
+  monthlyRepayment: number;
+  netMonthlyCashFlow: number;
+  rentalYield: number;
+  netRentalYield: number;
+  roi: number;
+  totalCashInvested: number;
+  riskLevel: 'Low' | 'Moderate' | 'High' | 'Negative';
+  smartScore: number;
+  recommendation: string;
+  verdict: string;
+  scenarios: {
+    interestPlus1: number;
+    interestPlus2: number;
+    vacancy10: number;
+    vacancy20: number;
+    rentalDrop10: number;
+  };
+}

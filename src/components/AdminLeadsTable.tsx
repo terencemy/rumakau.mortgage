@@ -33,6 +33,8 @@ interface Lead {
   approvalProbability: number;
   bankCategory: string;
   riskGrade: string;
+  leadType: 'mortgage' | 'investment';
+  roi: number;
 }
 
 interface Props {
@@ -178,10 +180,15 @@ export const AdminLeadsTable: React.FC<Props> = ({ email, token, onClose }) => {
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900">{lead.mainBorrowerName}</span>
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                          lead.riskGrade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-                          lead.riskGrade === 'B' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+                          lead.leadType === 'investment' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700'
                         }`}>
-                          Grade {lead.riskGrade}
+                          {lead.leadType || 'Mortgage'}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                          lead.riskGrade === 'A' || lead.riskGrade === 'Low' ? 'bg-emerald-100 text-emerald-700' :
+                          lead.riskGrade === 'B' || lead.riskGrade === 'Moderate' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+                        }`}>
+                          {lead.riskGrade}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -196,9 +203,15 @@ export const AdminLeadsTable: React.FC<Props> = ({ email, token, onClose }) => {
                     </div>
 
                     <div className="md:col-span-2 text-center space-y-1">
-                      <div className="text-xs font-bold text-slate-900">RM {lead.netMonthlyIncomeMain.toLocaleString()}</div>
-                      <div className={`text-[10px] font-bold ${lead.combinedDsr > 70 ? 'text-rose-500' : 'text-emerald-600'}`}>
-                        {lead.combinedDsr}% DSR
+                      <div className="text-xs font-bold text-slate-900">
+                        {lead.leadType === 'investment' ? `RM ${lead.netMonthlyIncomeMain.toLocaleString()}/mo` : `RM ${lead.netMonthlyIncomeMain.toLocaleString()}`}
+                      </div>
+                      <div className={`text-[10px] font-bold ${
+                        lead.leadType === 'investment' 
+                          ? (lead.roi > 5 ? 'text-emerald-600' : 'text-rose-500')
+                          : (lead.combinedDsr > 70 ? 'text-rose-500' : 'text-emerald-600')
+                      }`}>
+                        {lead.leadType === 'investment' ? `${lead.roi.toFixed(2)}% ROI` : `${lead.combinedDsr}% DSR`}
                       </div>
                     </div>
 
@@ -233,10 +246,14 @@ export const AdminLeadsTable: React.FC<Props> = ({ email, token, onClose }) => {
                           <div className="space-y-4">
                             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Financial Details</h4>
                             <div className="space-y-2">
-                              <DetailRow label="Net Income (Main)" value={`RM ${lead.netMonthlyIncomeMain.toLocaleString()}`} />
-                              <DetailRow label="Net Income (Joint)" value={lead.netMonthlyIncomeJoint ? `RM ${lead.netMonthlyIncomeJoint.toLocaleString()}` : '-'} />
-                              <DetailRow label="Stress Installment" value={`RM ${lead.stressTestInstallment.toLocaleString()}`} />
-                              <DetailRow label="Bank Category" value={lead.bankCategory} />
+                              <DetailRow label={lead.leadType === 'investment' ? "Net Cash Flow" : "Net Income (Main)"} value={`RM ${lead.netMonthlyIncomeMain.toLocaleString()}`} />
+                              {lead.leadType === 'investment' ? (
+                                <DetailRow label="Annual ROI" value={`${lead.roi.toFixed(2)}%`} />
+                              ) : (
+                                <DetailRow label="Net Income (Joint)" value={lead.netMonthlyIncomeJoint ? `RM ${lead.netMonthlyIncomeJoint.toLocaleString()}` : '-'} />
+                              )}
+                              <DetailRow label={lead.leadType === 'investment' ? "Monthly Loan" : "Stress Installment"} value={`RM ${lead.stressTestInstallment.toLocaleString()}`} />
+                              <DetailRow label={lead.leadType === 'investment' ? "Risk Level" : "Bank Category"} value={lead.bankCategory} />
                             </div>
                           </div>
                           
