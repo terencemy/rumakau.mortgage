@@ -21,17 +21,22 @@ export const InvestmentDashboard: React.FC<Props> = ({ result, input, onReset })
   const [isShared, setIsShared] = React.useState(false);
 
   const handleShare = async () => {
-    const shareData = {
-      title: 'Rumakau ROI Check',
-      text: `I just analyzed a property deal on Rumakau.com! ROI Score: ${result.smartScore}/100. Check it out!`,
-      url: window.location.href
-    };
-
     try {
+      const dataToEncode = { input, result };
+      const jsonStr = JSON.stringify(dataToEncode);
+      const encodedData = window.btoa(unescape(encodeURIComponent(jsonStr)));
+      const shareUrl = `${window.location.origin}${window.location.pathname}?tool=investment&data=${encodedData}`;
+
+      const shareData = {
+        title: 'Rumakau ROI Check',
+        text: `I just analyzed a property deal on Rumakau.com! ROI Score: ${result.smartScore}/100. Check it out!`,
+        url: shareUrl
+      };
+
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareUrl);
         setIsShared(true);
         setTimeout(() => setIsShared(false), 2000);
       }

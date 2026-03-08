@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MortgageForm } from './components/MortgageForm';
 import { AnalysisDashboard } from './components/AnalysisDashboard';
 import { VerificationGate } from './components/VerificationGate';
@@ -31,6 +31,37 @@ export default function App() {
   const [investmentResult, setInvestmentResult] = useState<InvestmentAnalysisResult | null>(null);
   
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isSharedLink, setIsSharedLink] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedData = params.get('data');
+    const tool = params.get('tool');
+    
+    if (sharedData && tool) {
+      try {
+        // Use a more robust way to decode base64 with potential Unicode characters
+        const decodedStr = decodeURIComponent(escape(window.atob(sharedData)));
+        const decoded = JSON.parse(decodedStr);
+        
+        if (tool === 'investment' && decoded.input && decoded.result) {
+          setInvestmentInput(decoded.input);
+          setInvestmentResult(decoded.result);
+          setActiveTool('investment');
+          setState('dashboard');
+          setIsSharedLink(true);
+        } else if (tool === 'mortgage' && decoded.request && decoded.result) {
+          setAnalysisRequest(decoded.request);
+          setAnalysisResult(decoded.result);
+          setActiveTool('mortgage');
+          setState('dashboard');
+          setIsSharedLink(true);
+        }
+      } catch (e) {
+        console.error("Failed to parse shared data", e);
+      }
+    }
+  }, []);
 
   const handleMortgageSubmit = async (data: MortgageAnalysisRequest) => {
     setIsAnalyzing(true);
@@ -117,19 +148,31 @@ export default function App() {
   };
 
   const handleShare = async () => {
-    const shareData = {
-      title: activeTool === 'mortgage' ? 'Rumakau Mortgage Analysis' : 'Rumakau ROI Check',
-      text: activeTool === 'mortgage' 
-        ? `I just analyzed my mortgage eligibility on Rumakau.com! Approval Probability: ${Math.round(analysisResult?.approvalProbability || 0)}%.`
-        : `I just analyzed a property deal on Rumakau.com! ROI Score: ${investmentResult?.smartScore}/100.`,
-      url: window.location.href
-    };
+    let dataToEncode = {};
+    if (activeTool === 'mortgage' && analysisResult && analysisRequest) {
+      dataToEncode = { request: analysisRequest, result: analysisResult };
+    } else if (activeTool === 'investment' && investmentResult && investmentInput) {
+      dataToEncode = { input: investmentInput, result: investmentResult };
+    }
 
     try {
+      // Use a more robust way to encode base64 with potential Unicode characters
+      const jsonStr = JSON.stringify(dataToEncode);
+      const encodedData = window.btoa(unescape(encodeURIComponent(jsonStr)));
+      const shareUrl = `${window.location.origin}${window.location.pathname}?tool=${activeTool}&data=${encodedData}`;
+
+      const shareData = {
+        title: activeTool === 'mortgage' ? 'Rumakau Mortgage Analysis' : 'Rumakau ROI Check',
+        text: activeTool === 'mortgage' 
+          ? `I just analyzed my mortgage eligibility on Rumakau.com! Approval Probability: ${Math.round(analysisResult?.approvalProbability || 0)}%.`
+          : `I just analyzed a property deal on Rumakau.com! ROI Score: ${investmentResult?.smartScore}/100.`,
+        url: shareUrl
+      };
+
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareUrl);
         setIsShared(true);
         setTimeout(() => setIsShared(false), 2000);
       }
@@ -147,6 +190,11 @@ export default function App() {
   };
 
   const resetApp = () => {
+    // Clear URL parameters if we were on a shared link
+    if (window.location.search) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    setIsSharedLink(false);
     setState('form');
     setAnalysisRequest(null);
     setAnalysisResult(null);
@@ -314,7 +362,7 @@ export default function App() {
                     onClick={resetApp}
                     className="px-6 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-all shadow-lg"
                   >
-                    New Analysis
+                    {isSharedLink ? 'Try Calculator' : 'New Analysis'}
                   </button>
                 </div>
               </div>
