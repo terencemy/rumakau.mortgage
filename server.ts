@@ -78,10 +78,10 @@ async function startServer() {
   app.use(express.json());
 
   app.get("/api/verify/status", (req, res) => {
-    const resendKey = (process.env.RUMAKAU_LIVE || process.env.RESEND_API_KEY || "").trim();
+    const resendKey = (process.env.RUMAKAU_LIVE || process.env.RESEND_API_KEY || "").trim().replace(/^["']|["']$/g, '');
     
     // Check environment variable first, then fallback
-    const envGeminiKey = (process.env.GEMINI_API_KEY || "").trim();
+    const envGeminiKey = (process.env.GEMINI_API_KEY || "").trim().replace(/^["']|["']$/g, '');
     const fallbackKey = "AIzaSyDgmn2993iMD45j1LfJ6n1fEVGxjITyA2A";
     const geminiKey = envGeminiKey || fallbackKey;
     const isUsingFallback = !envGeminiKey;
@@ -93,7 +93,8 @@ async function startServer() {
       geminiFullPreview: geminiKey ? `${geminiKey.substring(0, 10)}...${geminiKey.slice(-10)}` : null,
       isUsingFallback,
       dbStatus: !!db ? "Connected" : "Error",
-      envKeyLength: envGeminiKey.length
+      geminiKeyLength: envGeminiKey.length,
+      resendKeyLength: resendKey.length
     });
   });
 
@@ -160,7 +161,7 @@ async function startServer() {
     otps.set(normalizedValue, code);
     
     // 1. Check if Resend is configured
-    const resendKey = process.env.RUMAKAU_LIVE || process.env.RESEND_API_KEY;
+    const resendKey = (process.env.RUMAKAU_LIVE || process.env.RESEND_API_KEY || "").trim().replace(/^["']|["']$/g, '');
     if (!resendKey) {
       return res.status(500).json({ 
         error: "Email service not configured. Please add RUMAKAU_LIVE to environment variables." 
@@ -170,7 +171,7 @@ async function startServer() {
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
     try {
-      const resend = new Resend(resendKey.trim());
+      const resend = new Resend(resendKey);
       const { error } = await resend.emails.send({
         from: fromEmail,
         to: normalizedValue,
@@ -277,7 +278,7 @@ async function startServer() {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     adminOtps.set(normalizedEmail, code);
     
-    const resendKey = process.env.RUMAKAU_LIVE || process.env.RESEND_API_KEY;
+    const resendKey = (process.env.RUMAKAU_LIVE || process.env.RESEND_API_KEY || "").trim().replace(/^["']|["']$/g, '');
     if (!resendKey) {
       return res.status(500).json({ 
         error: "Email service not configured. Please add RUMAKAU_LIVE to environment variables." 
@@ -287,7 +288,7 @@ async function startServer() {
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
     try {
-      const resend = new Resend(resendKey.trim());
+      const resend = new Resend(resendKey);
       const { error } = await resend.emails.send({
         from: fromEmail,
         to: normalizedEmail,
