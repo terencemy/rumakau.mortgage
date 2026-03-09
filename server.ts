@@ -105,7 +105,7 @@ async function startServer() {
     const geminiKey = envKey || fallbackKey;
 
     const results: any[] = [];
-    const modelsToTest = ["gemini-3-flash-preview", "gemini-2.0-flash", "gemini-flash-latest"];
+    const modelsToTest = ["gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-flash-latest"];
 
     try {
       const { GoogleGenAI } = await import("@google/genai");
@@ -490,8 +490,7 @@ async function startServer() {
       const modelsToTry = [
         "gemini-3-flash-preview", 
         "gemini-3.1-flash-lite-preview", 
-        "gemini-flash-latest", 
-        "gemini-1.5-flash-latest"
+        "gemini-flash-latest"
       ];
       let currentModelIndex = 0;
 
