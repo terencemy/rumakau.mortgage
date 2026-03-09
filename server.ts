@@ -160,16 +160,17 @@ async function startServer() {
     otps.set(normalizedValue, code);
     
     // 1. Check if Resend is configured
-    if (!process.env.RESEND_API_KEY) {
+    const resendKey = process.env.RUMAKAU_LIVE || process.env.RESEND_API_KEY;
+    if (!resendKey) {
       return res.status(500).json({ 
-        error: "Email service not configured. Please add RESEND_API_KEY to environment variables." 
+        error: "Email service not configured. Please add RUMAKAU_LIVE to environment variables." 
       });
     }
 
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
     try {
-      const resend = new Resend(process.env.RESEND_API_KEY.trim());
+      const resend = new Resend(resendKey.trim());
       const { error } = await resend.emails.send({
         from: fromEmail,
         to: normalizedValue,
@@ -276,16 +277,17 @@ async function startServer() {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     adminOtps.set(normalizedEmail, code);
     
-    if (!process.env.RESEND_API_KEY) {
+    const resendKey = process.env.RUMAKAU_LIVE || process.env.RESEND_API_KEY;
+    if (!resendKey) {
       return res.status(500).json({ 
-        error: "Email service not configured. Please add RESEND_API_KEY to environment variables." 
+        error: "Email service not configured. Please add RUMAKAU_LIVE to environment variables." 
       });
     }
 
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
     try {
-      const resend = new Resend(process.env.RESEND_API_KEY.trim());
+      const resend = new Resend(resendKey.trim());
       const { error } = await resend.emails.send({
         from: fromEmail,
         to: normalizedEmail,
