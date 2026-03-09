@@ -78,7 +78,7 @@ async function startServer() {
   app.use(express.json());
 
   app.get("/api/verify/status", (req, res) => {
-    const resendKey = (process.env.RESEND_API_KEY || "").trim();
+    const resendKey = (process.env.RUMAKAU_LIVE || process.env.RESEND_API_KEY || "").trim();
     
     // Check environment variable first, then fallback
     const envGeminiKey = (process.env.GEMINI_API_KEY || "").trim();
