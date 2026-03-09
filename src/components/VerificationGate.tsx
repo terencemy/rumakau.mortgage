@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, MessageSquare, ShieldCheck, ArrowRight, RefreshCw, CheckCircle2, Bell, Info } from 'lucide-react';
-import { io } from 'socket.io-client';
 
 interface Props {
   onVerified: (contactInfo: { type: 'email' | 'whatsapp', value: string }) => void;
@@ -16,7 +15,6 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
   const [timer, setTimer] = useState(60);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sandboxCode, setSandboxCode] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<{ 
     resend: { status: 'ready' | 'missing', preview?: string }
   }>({ 
@@ -31,19 +29,7 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
         resend: { status: data.hasResend ? 'ready' : 'missing', preview: data.resendPreview }
       }))
       .catch(() => {});
-
-    // Listen for sandbox fallback codes
-    const socket = io();
-    socket.on('otp_sent', (data) => {
-      if (data.isSandboxFallback && data.contactValue.toLowerCase() === value.toLowerCase()) {
-        setSandboxCode(data.code);
-      }
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [value]);
+  }, []);
 
   useEffect(() => {
     let interval: any;
@@ -136,16 +122,10 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
           
           <div className="mt-4 flex flex-col items-center gap-2">
             <div className="flex gap-2">
-              {apiStatus.resend.status === 'ready' ? (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-600 uppercase tracking-wider border border-emerald-100">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Email Verification Active
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border border-slate-100">
-                  Email Simulated
-                </div>
-              )}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-600 uppercase tracking-wider border border-emerald-100">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Secure Verification Active
+              </div>
             </div>
           </div>
 
@@ -154,27 +134,6 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
               {error}
             </div>
           )}
-
-          <AnimatePresence>
-            {sandboxCode && step === 'otp' && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl shadow-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center shrink-0">
-                    <Bell size={16} className="text-white animate-bounce" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-amber-600">Sandbox Fallback</div>
-                    <div className="text-sm font-bold text-amber-900">Code: <span className="text-xl tracking-[0.2em] ml-2">{sandboxCode}</span></div>
-                    <div className="text-[10px] text-amber-500 mt-1">Domain unverified in Resend. Code shown for testing.</div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
         <AnimatePresence mode="wait">
