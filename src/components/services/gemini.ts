@@ -2,7 +2,9 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { MortgageAnalysisRequest, MortgageAnalysisResult } from "../../types";
 
 export async function analyzeMortgage(data: MortgageAnalysisRequest): Promise<MortgageAnalysisResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  // Try to get API key from process.env (defined by Vite) or import.meta.env
+  const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY;
+  
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not configured. Please ensure it is set in your environment.");
   }

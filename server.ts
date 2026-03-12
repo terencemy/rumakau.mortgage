@@ -81,16 +81,34 @@ async function startServer() {
   app.get("/api/verify/status", (req, res) => {
     const resendKey = (process.env.RUMAKAU_LIVE || process.env.RESEND_API_KEY || "").trim().replace(/^["']|["']$/g, '');
     const geminiKey = (process.env.GEMINI_API_KEY || "").trim().replace(/^["']|["']$/g, '');
+    const sheetId = (process.env.GOOGLE_SHEET_ID || "").trim().replace(/^["']|["']$/g, '');
+    const clientEmail = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT || "").trim().replace(/^["']|["']$/g, '');
+    const privateKey = (process.env.GOOGLE_PRIVATE_KEY || "").trim().replace(/^["']|["']$/g, '');
+    
+    console.log("[STATUS CHECK] GOOGLE_SHEET_ID length:", sheetId.length, "Preview:", sheetId.substring(0, 5) + "...");
+    console.log("[STATUS CHECK] GOOGLE_SERVICE_ACCOUNT_EMAIL length:", clientEmail.length, "Preview:", clientEmail.substring(0, 5) + "...");
+    console.log("[STATUS CHECK] GOOGLE_PRIVATE_KEY length:", privateKey.length, "Preview:", privateKey.substring(0, 20) + "...");
+    
+    const missingSheetsVars = [
+      !sheetId && "GOOGLE_SHEET_ID",
+      (!clientEmail) && "GOOGLE_SERVICE_ACCOUNT_EMAIL",
+      !privateKey && "GOOGLE_PRIVATE_KEY"
+    ].filter(Boolean);
+
+    if (missingSheetsVars.length > 0) {
+      console.log("[STATUS CHECK] Missing Sheets Variables:", missingSheetsVars.join(", "));
+    }
     
     res.json({ 
       hasResend: !!resendKey,
       resendPreview: resendKey ? `${resendKey.substring(0, 4)}...` : null,
       hasGemini: !!geminiKey,
       geminiFullPreview: geminiKey ? `${geminiKey.substring(0, 10)}...${geminiKey.slice(-10)}` : null,
-      hasGoogleSheets: !!process.env.GOOGLE_SHEET_ID,
+      hasGoogleSheets: !!sheetId && !!clientEmail && !!privateKey,
       dbStatus: !!db ? "Connected" : "Error",
       geminiKeyLength: geminiKey.length,
-      resendKeyLength: resendKey.length
+      resendKeyLength: resendKey.length,
+      missingSheetsVars
     });
   });
 
@@ -209,10 +227,10 @@ async function startServer() {
     }
 
     // 2. Save to Google Sheets
-    const sheetId = process.env.GOOGLE_SHEET_ID;
-    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
+    const sheetId = (process.env.GOOGLE_SHEET_ID || "").trim().replace(/^["']|["']$/g, '');
+    const clientEmail = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT || "").trim().replace(/^["']|["']$/g, '');
+    const privateKey = (process.env.GOOGLE_PRIVATE_KEY || "").trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+    
     if (sheetId && clientEmail && privateKey) {
       try {
         const auth = new google.auth.GoogleAuth({
@@ -254,8 +272,11 @@ async function startServer() {
           }
         });
         console.log("[LEAD] Saved to Google Sheets");
-      } catch (error) {
-        console.error("[GOOGLE SHEETS ERROR]", error);
+      } catch (error: any) {
+        console.error("[GOOGLE SHEETS ERROR]", error.message);
+        if (error.response) {
+          console.error("[GOOGLE SHEETS ERROR DETAILS]", error.response.data);
+        }
       }
     }
 

@@ -17,7 +17,7 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<{ 
     resend: { status: 'ready' | 'missing', preview?: string },
-    googleSheets: { status: 'ready' | 'missing' }
+    googleSheets: { status: 'ready' | 'missing', missing?: string[] }
   }>({ 
     resend: { status: 'missing' },
     googleSheets: { status: 'missing' }
@@ -29,7 +29,10 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
       .then(res => res.json())
       .then(data => setApiStatus({ 
         resend: { status: data.hasResend ? 'ready' : 'missing', preview: data.resendPreview },
-        googleSheets: { status: data.hasGoogleSheets ? 'ready' : 'missing' }
+        googleSheets: { 
+          status: data.hasGoogleSheets ? 'ready' : 'missing',
+          missing: data.missingSheetsVars
+        }
       }))
       .catch(() => {});
   }, []);
@@ -129,11 +132,23 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Secure Verification Active
               </div>
-              {apiStatus.googleSheets.status === 'ready' && (
+              {apiStatus.googleSheets.status === 'ready' ? (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-[10px] font-bold text-blue-600 uppercase tracking-wider border border-blue-100">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                   Sheets Sync Active
                 </div>
+              ) : (
+                apiStatus.googleSheets.missing && apiStatus.googleSheets.missing.length > 0 && (
+                  <div className="group relative">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-[10px] font-bold text-amber-600 uppercase tracking-wider border border-amber-100 cursor-help">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Sheets Setup Incomplete
+                    </div>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-gray-900 text-white text-[10px] rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                      Missing: {apiStatus.googleSheets.missing.join(', ')}
+                    </div>
+                  </div>
+                )
               )}
             </div>
           </div>
