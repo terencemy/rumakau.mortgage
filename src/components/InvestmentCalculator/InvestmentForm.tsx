@@ -65,7 +65,7 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
               onChange={handleChange} 
               icon={<Wallet size={16} />}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <InputField 
                 label="Down Payment (RM)" 
                 name="downPayment" 
@@ -80,7 +80,7 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
                 disabled
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <InputField 
                 label="Interest Rate (%)" 
                 name="interestRate" 
@@ -115,7 +115,7 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
               onChange={handleChange} 
               icon={<Wallet size={16} />}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <InputField 
                 label="Maintenance (RM/mo)" 
                 name="maintenanceFees" 
@@ -140,7 +140,7 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
                 }
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <InputField 
                 label="Annual Property Tax" 
                 name="propertyTax" 
@@ -158,7 +158,7 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
         </div>
 
         {/* Initial Costs */}
-        <div className="md:col-span-2 space-y-6 bg-slate-900 p-8 rounded-[2rem] shadow-xl">
+        <div className="md:col-span-2 space-y-6 bg-slate-900 p-6 sm:p-8 rounded-[2rem] shadow-xl">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
               <Percent className="text-emerald-400" size={20} />
@@ -222,14 +222,17 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
 
 const InputField = ({ label, name, value, onChange, icon, step = "1", disabled = false, dark = false, tooltip }: any) => (
   <div className="space-y-2">
-    <div className="flex items-center gap-1.5">
-      <label className={`text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-slate-400' : 'text-slate-400'}`}>
+    <div className="flex items-center flex-wrap gap-1.5">
+      <label className={`text-[10px] font-bold uppercase tracking-widest shrink-0 ${dark ? 'text-slate-400' : 'text-slate-400'}`}>
         {label}
       </label>
       {tooltip && (
-        <div className="group relative">
-          <Info size={12} className="text-slate-400 cursor-help hover:text-slate-600 transition-colors" />
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-900 text-white text-[10px] rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-xl pointer-events-none">
+        <div className="group relative shrink-0">
+          <Info 
+            size={12} 
+            className={`${dark ? 'text-slate-500 hover:text-emerald-400' : 'text-slate-400 hover:text-slate-600'} cursor-help transition-colors`} 
+          />
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[calc(100vw-4rem)] sm:w-64 p-3 bg-slate-900 text-white text-[10px] rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-xl pointer-events-none border border-white/10">
             <div className="relative leading-relaxed">
               {tooltip}
               <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
