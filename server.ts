@@ -83,11 +83,17 @@ async function startServer() {
     const geminiKey = (process.env.GEMINI_API_KEY || "").trim().replace(/^["']|["']$/g, '');
     const sheetId = (process.env.GOOGLE_SHEET_ID || "").trim().replace(/^["']|["']$/g, '');
     const clientEmail = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT || "").trim().replace(/^["']|["']$/g, '');
-    const privateKey = (process.env.GOOGLE_PRIVATE_KEY || "").trim().replace(/^["']|["']$/g, '');
+    const privateKey = (process.env.GOOGLE_PRIVATE_KEY || "").trim()
+      .replace(/^["']|["']$/g, '')
+      .replace(/[).]+$/, '')
+      .replace(/\\n/g, '\n');
     
     console.log("[STATUS CHECK] GOOGLE_SHEET_ID length:", sheetId.length, "Preview:", sheetId.substring(0, 5) + "...");
     console.log("[STATUS CHECK] GOOGLE_SERVICE_ACCOUNT_EMAIL length:", clientEmail.length, "Preview:", clientEmail.substring(0, 5) + "...");
     console.log("[STATUS CHECK] GOOGLE_PRIVATE_KEY length:", privateKey.length, "Preview:", privateKey.substring(0, 20) + "...");
+    
+    const googleVars = Object.keys(process.env).filter(key => key.startsWith('GOOGLE_'));
+    console.log("[STATUS CHECK] Found GOOGLE_ variables:", googleVars);
     
     const missingSheetsVars = [
       !sheetId && "GOOGLE_SHEET_ID",
@@ -108,7 +114,8 @@ async function startServer() {
       dbStatus: !!db ? "Connected" : "Error",
       geminiKeyLength: geminiKey.length,
       resendKeyLength: resendKey.length,
-      missingSheetsVars
+      missingSheetsVars,
+      foundGoogleVars: googleVars
     });
   });
 
@@ -229,7 +236,10 @@ async function startServer() {
     // 2. Save to Google Sheets
     const sheetId = (process.env.GOOGLE_SHEET_ID || "").trim().replace(/^["']|["']$/g, '');
     const clientEmail = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT || "").trim().replace(/^["']|["']$/g, '');
-    const privateKey = (process.env.GOOGLE_PRIVATE_KEY || "").trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+    const privateKey = (process.env.GOOGLE_PRIVATE_KEY || "").trim()
+      .replace(/^["']|["']$/g, '')
+      .replace(/[).]+$/, '') // Remove accidental trailing ) or .
+      .replace(/\\n/g, '\n');
     
     if (sheetId && clientEmail && privateKey) {
       try {
