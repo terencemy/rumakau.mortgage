@@ -220,51 +220,62 @@ export const InvestmentForm: React.FC<Props> = ({ onSubmit, isLoading }) => {
   );
 };
 
-const InputField = ({ label, name, value, onChange, icon, step = "1", disabled = false, dark = false, tooltip }: any) => (
-  <div className="space-y-2">
-    <div className="flex items-center flex-wrap gap-1.5">
-      <label className={`text-[10px] font-bold uppercase tracking-widest shrink-0 ${dark ? 'text-slate-400' : 'text-slate-400'}`}>
-        {label}
-      </label>
-      {tooltip && (
-        <button 
-          type="button"
-          className="group relative shrink-0 focus:outline-none touch-manipulation"
-          aria-label={`Information about ${label}`}
-        >
-          <Info 
-            size={14} 
-            className={`${dark ? 'text-slate-500 group-hover:text-emerald-400 group-focus:text-emerald-400' : 'text-slate-400 group-hover:text-slate-600 group-focus:text-slate-600'} cursor-help transition-colors`} 
-          />
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[calc(100vw-4rem)] sm:w-64 p-3 bg-slate-900 text-white text-[10px] rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus:opacity-100 group-focus:visible transition-all z-50 shadow-xl pointer-events-none border border-white/10 text-left">
-            <div className="relative leading-relaxed">
-              {tooltip}
-              <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
-            </div>
+const InputField = ({ label, name, value, onChange, icon, step = "1", disabled = false, dark = false, tooltip }: any) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center flex-wrap gap-1.5">
+        <label className={`text-[10px] font-bold uppercase tracking-widest shrink-0 ${dark ? 'text-slate-400' : 'text-slate-400'}`}>
+          {label}
+        </label>
+        {tooltip && (
+          <div className="relative shrink-0">
+            <button 
+              type="button"
+              onClick={() => setShowTooltip(!showTooltip)}
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              className="flex items-center focus:outline-none touch-manipulation"
+              aria-label={`Information about ${label}`}
+            >
+              <Info 
+                size={14} 
+                className={`${dark ? 'text-slate-500 hover:text-emerald-400' : 'text-slate-400 hover:text-slate-600'} ${showTooltip ? (dark ? 'text-emerald-400' : 'text-slate-600') : ''} cursor-help transition-colors`} 
+              />
+            </button>
+            {showTooltip && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[calc(100vw-4rem)] sm:w-64 p-3 bg-slate-900 text-white text-[10px] rounded-xl z-50 shadow-xl border border-white/10 text-left pointer-events-none">
+                <div className="relative leading-relaxed">
+                  {tooltip}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                </div>
+              </div>
+            )}
           </div>
-        </button>
-      )}
+        )}
+      </div>
+      <div className="relative">
+        {icon && (
+          <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+            {icon}
+          </div>
+        )}
+        <input
+          type="number"
+          name={name}
+          value={value}
+          onChange={onChange}
+          step={step}
+          disabled={disabled}
+          aria-label={label}
+          className={`w-full ${icon ? 'pl-12' : 'px-4'} py-4 rounded-2xl text-sm font-bold outline-none transition-all ${
+            dark 
+              ? 'bg-white/5 border border-white/10 text-white focus:bg-white/10 focus:border-emerald-500/50' 
+              : 'bg-slate-50 border border-slate-100 text-slate-900 focus:bg-white focus:border-slate-900'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        />
+      </div>
     </div>
-    <div className="relative">
-      {icon && (
-        <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
-          {icon}
-        </div>
-      )}
-      <input
-        type="number"
-        name={name}
-        value={value}
-        onChange={onChange}
-        step={step}
-        disabled={disabled}
-        aria-label={label}
-        className={`w-full ${icon ? 'pl-12' : 'px-4'} py-4 rounded-2xl text-sm font-bold outline-none transition-all ${
-          dark 
-            ? 'bg-white/5 border border-white/10 text-white focus:bg-white/10 focus:border-emerald-500/50' 
-            : 'bg-slate-50 border border-slate-100 text-slate-900 focus:bg-white focus:border-slate-900'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-      />
-    </div>
-  </div>
-);
+  );
+};
