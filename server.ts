@@ -119,6 +119,60 @@ async function startServer() {
     });
   });
 
+  // Test Google Sheets Connection
+  app.get("/api/verify/test-sheets", async (req, res) => {
+    const sheetId = (process.env.GOOGLE_SHEET_ID || "").trim().replace(/^["']|["']$/g, '');
+    const clientEmail = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT || "").trim().replace(/^["']|["']$/g, '');
+    const privateKey = (process.env.GOOGLE_PRIVATE_KEY || "").trim()
+      .replace(/^["']|["']$/g, '')
+      .replace(/[).]+$/, '')
+      .replace(/\\n/g, '\n');
+
+    if (!sheetId || !clientEmail || !privateKey) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Missing credentials",
+        missing: [
+          !sheetId && "GOOGLE_SHEET_ID",
+          !clientEmail && "GOOGLE_SERVICE_ACCOUNT_EMAIL",
+          !privateKey && "GOOGLE_PRIVATE_KEY"
+        ].filter(Boolean)
+      });
+    }
+
+    try {
+      const auth = new google.auth.GoogleAuth({
+        credentials: { client_email: clientEmail, private_key: privateKey },
+        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+      });
+      const sheets = google.sheets({ version: 'v4', auth });
+      await sheets.spreadsheets.get({ spreadsheetId: sheetId });
+      
+      res.json({ success: true, message: "Connection successful! App has access to the sheet." });
+    } catch (error: any) {
+      console.error("[SHEETS TEST ERROR]", error.message);
+      if (error.response) {
+        console.error("[SHEETS TEST ERROR DETAILS]", JSON.stringify(error.response.data, null, 2));
+      }
+      let userMessage = "Failed to connect to Google Sheets.";
+      
+      if (error.message.includes("not found")) {
+        userMessage = "Sheet ID not found. Please check your GOOGLE_SHEET_ID.";
+      } else if (error.message.includes("permission") || error.message.includes("403")) {
+        userMessage = `Permission denied. Please share your sheet with: ${clientEmail} as an EDITOR.`;
+      } else if (error.message.includes("invalid_grant") || error.message.includes("key")) {
+        userMessage = "Invalid Private Key. Please ensure you copied the entire block including BEGIN and END lines.";
+      }
+
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        userMessage,
+        details: error.response?.data
+      });
+    }
+  });
+
   // Mock Verification API
   const otps = new Map<string, string>();
 
@@ -241,6 +295,11 @@ async function startServer() {
       .replace(/[).]+$/, '') // Remove accidental trailing ) or .
       .replace(/\\n/g, '\n');
     
+    console.log("[LEAD SYNC] Checking credentials...");
+    console.log("[LEAD SYNC] Sheet ID:", sheetId ? "Present" : "MISSING");
+    console.log("[LEAD SYNC] Email:", clientEmail ? "Present" : "MISSING");
+    console.log("[LEAD SYNC] Key:", privateKey ? "Present" : "MISSING");
+
     if (sheetId && clientEmail && privateKey) {
       try {
         const auth = new google.auth.GoogleAuth({
@@ -253,34 +312,42 @@ async function startServer() {
 
         const sheets = google.sheets({ version: 'v4', auth });
         
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: sheetId,
-          range: 'Sheet1!A:T',
-          valueInputOption: 'RAW',
-          requestBody: {
-            values: [[
-              timestamp,
-              contactType,
-              contactValue,
-              mainBorrowerName,
-              propertyAddress,
-              propertyType,
-              spaPrice,
-              loanAmount,
-              dsrMain,
-              dsrJoint,
-              combinedDsr,
-              netMonthlyIncomeMain,
-              netMonthlyIncomeJoint,
-              stressTestInstallment,
-              approvalProbability,
-              bankCategory,
-              riskGrade,
-              leadType || 'mortgage',
-              roi || 0
-            ]]
+        try {
+          await sheets.spreadsheets.values.append({
+            spreadsheetId: sheetId,
+            range: 'Sheet1!A:T',
+            valueInputOption: 'RAW',
+            requestBody: {
+              values: [[
+                timestamp, contactType, contactValue, mainBorrowerName,
+                propertyAddress, propertyType, spaPrice, loanAmount,
+                dsrMain, dsrJoint, combinedDsr, netMonthlyIncomeMain,
+                netMonthlyIncomeJoint, stressTestInstallment, approvalProbability,
+                bankCategory, riskGrade, leadType || 'mortgage', roi || 0
+              ]]
+            }
+          });
+        } catch (sheetError: any) {
+          // If Sheet1 doesn't exist, try appending to the first sheet by just using range 'A:T'
+          if (sheetError.message.includes("Sheet1")) {
+            await sheets.spreadsheets.values.append({
+              spreadsheetId: sheetId,
+              range: 'A:T',
+              valueInputOption: 'RAW',
+              requestBody: {
+                values: [[
+                  timestamp, contactType, contactValue, mainBorrowerName,
+                  propertyAddress, propertyType, spaPrice, loanAmount,
+                  dsrMain, dsrJoint, combinedDsr, netMonthlyIncomeMain,
+                  netMonthlyIncomeJoint, stressTestInstallment, approvalProbability,
+                  bankCategory, riskGrade, leadType || 'mortgage', roi || 0
+                ]]
+              }
+            });
+          } else {
+            throw sheetError;
           }
-        });
+        }
         console.log("[LEAD] Saved to Google Sheets");
       } catch (error: any) {
         console.error("[GOOGLE SHEETS ERROR]", error.message);
@@ -479,6 +546,10 @@ async function startServer() {
 
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    console.log("[STARTUP] Checking Google Sheets variables...");
+    console.log("[STARTUP] GOOGLE_SHEET_ID:", process.env.GOOGLE_SHEET_ID ? "YES" : "NO");
+    console.log("[STARTUP] GOOGLE_SERVICE_ACCOUNT:", (process.env.GOOGLE_SERVICE_ACCOUNT || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) ? "YES" : "NO");
+    console.log("[STARTUP] GOOGLE_PRIVATE_KEY:", process.env.GOOGLE_PRIVATE_KEY ? "YES" : "NO");
   });
 }
 
