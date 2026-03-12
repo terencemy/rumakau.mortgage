@@ -227,18 +227,22 @@ const InputField = ({ label, name, value, onChange, icon, step = "1", disabled =
         {label}
       </label>
       {tooltip && (
-        <div className="group relative shrink-0">
+        <button 
+          type="button"
+          className="group relative shrink-0 focus:outline-none touch-manipulation"
+          aria-label={`Information about ${label}`}
+        >
           <Info 
-            size={12} 
-            className={`${dark ? 'text-slate-500 hover:text-emerald-400' : 'text-slate-400 hover:text-slate-600'} cursor-help transition-colors`} 
+            size={14} 
+            className={`${dark ? 'text-slate-500 group-hover:text-emerald-400 group-focus:text-emerald-400' : 'text-slate-400 group-hover:text-slate-600 group-focus:text-slate-600'} cursor-help transition-colors`} 
           />
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[calc(100vw-4rem)] sm:w-64 p-3 bg-slate-900 text-white text-[10px] rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-xl pointer-events-none border border-white/10">
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[calc(100vw-4rem)] sm:w-64 p-3 bg-slate-900 text-white text-[10px] rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus:opacity-100 group-focus:visible transition-all z-50 shadow-xl pointer-events-none border border-white/10 text-left">
             <div className="relative leading-relaxed">
               {tooltip}
               <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
             </div>
           </div>
-        </div>
+        </button>
       )}
     </div>
     <div className="relative">
