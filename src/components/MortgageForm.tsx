@@ -205,6 +205,7 @@ export const MortgageForm: React.FC<Props> = ({ onSubmit, isAnalyzing }) => {
               type="number" 
               className="input-field font-mono" 
               value={borrower?.age}
+              onFocus={(e) => e.target.select()}
               onChange={e => updateBorrower(target, 'age', Number(e.target.value))}
             />
           </div>
@@ -214,6 +215,7 @@ export const MortgageForm: React.FC<Props> = ({ onSubmit, isAnalyzing }) => {
               type="number" 
               className="input-field font-mono" 
               value={borrower?.employment.monthlyGrossIncome}
+              onFocus={(e) => e.target.select()}
               onChange={e => updateEmployment(target, 'monthlyGrossIncome', Number(e.target.value))}
             />
           </div>
@@ -223,6 +225,7 @@ export const MortgageForm: React.FC<Props> = ({ onSubmit, isAnalyzing }) => {
               type="number" 
               className="input-field font-mono" 
               value={borrower?.employment.fixedIncome}
+              onFocus={(e) => e.target.select()}
               onChange={e => updateEmployment(target, 'fixedIncome', Number(e.target.value))}
             />
           </div>
@@ -232,6 +235,7 @@ export const MortgageForm: React.FC<Props> = ({ onSubmit, isAnalyzing }) => {
               type="number" 
               className="input-field font-mono" 
               value={borrower?.commitments.carLoan}
+              onFocus={(e) => e.target.select()}
               onChange={e => updateCommitments(target, 'carLoan', Number(e.target.value))}
             />
           </div>
@@ -241,6 +245,7 @@ export const MortgageForm: React.FC<Props> = ({ onSubmit, isAnalyzing }) => {
               type="number" 
               className="input-field font-mono" 
               value={borrower?.commitments.personalLoan}
+              onFocus={(e) => e.target.select()}
               onChange={e => updateCommitments(target, 'personalLoan', Number(e.target.value))}
             />
           </div>
@@ -356,6 +361,7 @@ export const MortgageForm: React.FC<Props> = ({ onSubmit, isAnalyzing }) => {
                       type="number" 
                       className="input-field font-mono" 
                       value={formData.property?.spaPrice}
+                      onFocus={(e) => e.target.select()}
                       onChange={e => updateProperty('spaPrice', Number(e.target.value))}
                     />
                   </div>
@@ -365,6 +371,7 @@ export const MortgageForm: React.FC<Props> = ({ onSubmit, isAnalyzing }) => {
                       type="number" 
                       className="input-field font-mono" 
                       value={formData.property?.marketValue}
+                      onFocus={(e) => e.target.select()}
                       onChange={e => updateProperty('marketValue', Number(e.target.value))}
                     />
                   </div>
@@ -374,6 +381,7 @@ export const MortgageForm: React.FC<Props> = ({ onSubmit, isAnalyzing }) => {
                       type="number" 
                       className="input-field font-mono" 
                       value={formData.property?.marginRequested}
+                      onFocus={(e) => e.target.select()}
                       onChange={e => updateProperty('marginRequested', Number(e.target.value))}
                     />
                   </div>
@@ -383,6 +391,7 @@ export const MortgageForm: React.FC<Props> = ({ onSubmit, isAnalyzing }) => {
                       type="number" 
                       className="input-field font-mono" 
                       value={formData.property?.loanTenure}
+                      onFocus={(e) => e.target.select()}
                       onChange={e => updateProperty('loanTenure', Number(e.target.value))}
                     />
                   </div>

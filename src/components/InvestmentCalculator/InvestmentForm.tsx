@@ -266,6 +266,7 @@ const InputField = ({ label, name, value, onChange, icon, step = "1", disabled =
           name={name}
           value={value}
           onChange={onChange}
+          onFocus={(e) => e.target.select()}
           step={step}
           disabled={disabled}
           aria-label={label}
