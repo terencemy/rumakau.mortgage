@@ -8,6 +8,7 @@ import { Server } from "socket.io";
 import dotenv from "dotenv";
 import Database from "better-sqlite3";
 import { Resend } from "resend";
+import { google } from "googleapis";
 
 dotenv.config();
 
@@ -86,6 +87,7 @@ async function startServer() {
       resendPreview: resendKey ? `${resendKey.substring(0, 4)}...` : null,
       hasGemini: !!geminiKey,
       geminiFullPreview: geminiKey ? `${geminiKey.substring(0, 10)}...${geminiKey.slice(-10)}` : null,
+      hasGoogleSheets: !!process.env.GOOGLE_SHEET_ID,
       dbStatus: !!db ? "Connected" : "Error",
       geminiKeyLength: geminiKey.length,
       resendKeyLength: resendKey.length
@@ -164,7 +166,7 @@ async function startServer() {
   });
 
   // Lead capture API
-  app.post("/api/leads", (req, res) => {
+  app.post("/api/leads", async (req, res) => {
     const { 
       timestamp, contactType, contactValue, mainBorrowerName, 
       propertyAddress, propertyType, spaPrice, loanAmount,
@@ -176,35 +178,88 @@ async function startServer() {
     
     if (!db) {
       console.warn("[LEAD] DB not available, logging to console only:", req.body);
-      return res.json({ success: true, warning: "Lead captured but DB not available" });
     }
 
-    try {
-      const stmt = db.prepare(`
-        INSERT INTO leads (
+    // 1. Save to SQLite
+    if (db) {
+      try {
+        const stmt = db.prepare(`
+          INSERT INTO leads (
+            timestamp, contactType, contactValue, mainBorrowerName, 
+            propertyAddress, propertyType, spaPrice, loanAmount,
+            dsrMain, dsrJoint, combinedDsr, 
+            netMonthlyIncomeMain, netMonthlyIncomeJoint, 
+            stressTestInstallment, approvalProbability, 
+            bankCategory, riskGrade, leadType, roi
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        stmt.run(
           timestamp, contactType, contactValue, mainBorrowerName, 
           propertyAddress, propertyType, spaPrice, loanAmount,
           dsrMain, dsrJoint, combinedDsr, 
           netMonthlyIncomeMain, netMonthlyIncomeJoint, 
           stressTestInstallment, approvalProbability, 
           bankCategory, riskGrade, leadType, roi
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      stmt.run(
-        timestamp, contactType, contactValue, mainBorrowerName, 
-        propertyAddress, propertyType, spaPrice, loanAmount,
-        dsrMain, dsrJoint, combinedDsr, 
-        netMonthlyIncomeMain, netMonthlyIncomeJoint, 
-        stressTestInstallment, approvalProbability, 
-        bankCategory, riskGrade, leadType, roi
-      );
-      console.log("[LEAD] Saved to DB:", req.body);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("[DB ERROR]", error);
-      res.status(500).json({ error: "Failed to save lead" });
+        );
+        console.log("[LEAD] Saved to SQLite DB");
+      } catch (error) {
+        console.error("[DB ERROR] Failed to save to SQLite:", error);
+      }
     }
+
+    // 2. Save to Google Sheets
+    const sheetId = process.env.GOOGLE_SHEET_ID;
+    const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+    if (sheetId && clientEmail && privateKey) {
+      try {
+        const auth = new google.auth.GoogleAuth({
+          credentials: {
+            client_email: clientEmail,
+            private_key: privateKey,
+          },
+          scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
+
+        const sheets = google.sheets({ version: 'v4', auth });
+        
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: sheetId,
+          range: 'Sheet1!A:T',
+          valueInputOption: 'RAW',
+          requestBody: {
+            values: [[
+              timestamp,
+              contactType,
+              contactValue,
+              mainBorrowerName,
+              propertyAddress,
+              propertyType,
+              spaPrice,
+              loanAmount,
+              dsrMain,
+              dsrJoint,
+              combinedDsr,
+              netMonthlyIncomeMain,
+              netMonthlyIncomeJoint,
+              stressTestInstallment,
+              approvalProbability,
+              bankCategory,
+              riskGrade,
+              leadType || 'mortgage',
+              roi || 0
+            ]]
+          }
+        });
+        console.log("[LEAD] Saved to Google Sheets");
+      } catch (error) {
+        console.error("[GOOGLE SHEETS ERROR]", error);
+      }
+    }
+
+    res.json({ success: true });
   });
 
   // Admin Verification & Leads Download

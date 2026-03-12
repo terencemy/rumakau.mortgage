@@ -16,9 +16,11 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<{ 
-    resend: { status: 'ready' | 'missing', preview?: string }
+    resend: { status: 'ready' | 'missing', preview?: string },
+    googleSheets: { status: 'ready' | 'missing' }
   }>({ 
-    resend: { status: 'missing' }
+    resend: { status: 'missing' },
+    googleSheets: { status: 'missing' }
   });
 
   useEffect(() => {
@@ -26,7 +28,8 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
     fetch('/api/verify/status')
       .then(res => res.json())
       .then(data => setApiStatus({ 
-        resend: { status: data.hasResend ? 'ready' : 'missing', preview: data.resendPreview }
+        resend: { status: data.hasResend ? 'ready' : 'missing', preview: data.resendPreview },
+        googleSheets: { status: data.hasGoogleSheets ? 'ready' : 'missing' }
       }))
       .catch(() => {});
   }, []);
@@ -126,6 +129,12 @@ export const VerificationGate: React.FC<Props> = ({ onVerified, isProcessing }) 
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Secure Verification Active
               </div>
+              {apiStatus.googleSheets.status === 'ready' && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-[10px] font-bold text-blue-600 uppercase tracking-wider border border-blue-100">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  Sheets Sync Active
+                </div>
+              )}
             </div>
           </div>
 
