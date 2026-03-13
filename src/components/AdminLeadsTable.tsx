@@ -10,7 +10,10 @@ import {
   Building2, 
   ShieldCheck,
   ChevronDown,
-  ExternalLink
+  ExternalLink,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -49,6 +52,8 @@ export const AdminLeadsTable: React.FC<Props> = ({ email, token, onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedLead, setExpandedLead] = useState<number | null>(null);
+  const [syncingLeadId, setSyncingLeadId] = useState<number | null>(null);
+  const [syncStatus, setSyncStatus] = useState<Record<number, { success: boolean, message: string }>>({});
 
   const fetchLeads = async () => {
     setIsLoading(true);
@@ -80,6 +85,36 @@ export const AdminLeadsTable: React.FC<Props> = ({ email, token, onClose }) => {
 
   const handleDownload = () => {
     window.location.href = `/api/admin/leads/download?email=${encodeURIComponent(email)}&token=${token}`;
+  };
+
+  const handleSyncToSheets = async (leadId: number) => {
+    setSyncingLeadId(leadId);
+    try {
+      const res = await fetch('/api/admin/leads/sync-sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token, leadId })
+      });
+      const data = await res.json();
+      setSyncStatus(prev => ({ 
+        ...prev, 
+        [leadId]: { success: res.ok, message: res.ok ? 'Synced!' : (data.error || 'Failed') } 
+      }));
+      
+      if (res.ok) {
+        setTimeout(() => {
+          setSyncStatus(prev => {
+            const next = { ...prev };
+            delete next[leadId];
+            return next;
+          });
+        }, 3000);
+      }
+    } catch (err) {
+      setSyncStatus(prev => ({ ...prev, [leadId]: { success: false, message: 'Error' } }));
+    } finally {
+      setSyncingLeadId(null);
+    }
   };
 
   return (
@@ -273,13 +308,35 @@ export const AdminLeadsTable: React.FC<Props> = ({ email, token, onClose }) => {
                               <DetailRow label="Verified Email" value={lead.contactValue} />
                               <DetailRow label="Timestamp" value={new Date(lead.timestamp).toLocaleString()} />
                               <DetailRow label="Lead ID" value={`#${lead.id}`} />
-                              <div className="pt-2">
+                              <div className="pt-2 flex flex-col gap-2">
                                 <a 
                                   href={`mailto:${lead.contactValue}`}
-                                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+                                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
                                 >
                                   Contact via Email <ExternalLink size={12} />
                                 </a>
+                                <button 
+                                  onClick={() => handleSyncToSheets(lead.id)}
+                                  disabled={syncingLeadId === lead.id}
+                                  className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                                    syncStatus[lead.id]?.success 
+                                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                                      : syncStatus[lead.id]?.success === false
+                                      ? 'bg-rose-50 border-rose-200 text-rose-700'
+                                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  {syncingLeadId === lead.id ? (
+                                    <RefreshCw size={12} className="animate-spin" />
+                                  ) : syncStatus[lead.id]?.success ? (
+                                    <CheckCircle2 size={12} />
+                                  ) : syncStatus[lead.id]?.success === false ? (
+                                    <AlertCircle size={12} />
+                                  ) : (
+                                    <FileSpreadsheet size={12} />
+                                  )}
+                                  {syncStatus[lead.id]?.message || 'Sync to Sheets'}
+                                </button>
                               </div>
                             </div>
                           </div>

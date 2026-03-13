@@ -52,10 +52,21 @@ export function calculateInvestment(input: InvestmentCalculatorInput): Investmen
 
   // 8. Smart Score (0-100)
   let smartScore = 0;
-  smartScore += Math.min(30, (roi / 10) * 30); // ROI contributes up to 30
-  smartScore += Math.min(30, (netRentalYield / 6) * 30); // Yield contributes up to 30
-  smartScore += netMonthlyCashFlow > 0 ? 20 : 0; // Positive cash flow contributes 20
-  smartScore += (loanAmount / propertyPrice) < 0.7 ? 20 : 10; // LTV contributes up to 20
+  
+  // ROI contributes up to 30 points (clamped between 0 and 30)
+  const roiPoints = (roi / 10) * 30;
+  smartScore += Math.max(0, Math.min(30, roiPoints));
+  
+  // Yield contributes up to 30 points (clamped between 0 and 30)
+  const yieldPoints = (netRentalYield / 6) * 30;
+  smartScore += Math.max(0, Math.min(30, yieldPoints));
+  
+  // Positive cash flow contributes 20 points
+  smartScore += netMonthlyCashFlow > 0 ? 20 : 0;
+  
+  // LTV contributes up to 20 points
+  smartScore += (loanAmount / propertyPrice) < 0.7 ? 20 : 10;
+  
   smartScore = Math.round(smartScore);
 
   let recommendation = "Good investment";

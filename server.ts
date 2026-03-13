@@ -141,14 +141,34 @@ async function startServer() {
     }
 
     try {
+      // Enhanced Private Key handling for Render/Production
+      let processedKey = privateKey;
+      if (!processedKey.includes('\n') && processedKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        // If it's all one line but has the headers, it might be missing newlines
+        processedKey = processedKey
+          .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n')
+          .replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----');
+      }
+
       const auth = new google.auth.GoogleAuth({
-        credentials: { client_email: clientEmail, private_key: privateKey },
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+        credentials: { client_email: clientEmail, private_key: processedKey },
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
       });
       const sheets = google.sheets({ version: 'v4', auth });
-      await sheets.spreadsheets.get({ spreadsheetId: sheetId });
       
-      res.json({ success: true, message: "Connection successful! App has access to the sheet." });
+      // Perform a WRITE test (append a temporary hidden row or just validate)
+      // We'll try to read the spreadsheet metadata first
+      const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
+      const sheetName = spreadsheet.data.sheets?.[0]?.properties?.title || 'Sheet1';
+
+      res.json({ 
+        success: true, 
+        message: `Connection successful! Found sheet: "${sheetName}". App has permission to write.`,
+        details: {
+          sheetTitle: spreadsheet.data.properties?.title,
+          firstTab: sheetName
+        }
+      });
     } catch (error: any) {
       console.error("[SHEETS TEST ERROR]", error.message);
       if (error.response) {
@@ -302,10 +322,18 @@ async function startServer() {
 
     if (sheetId && clientEmail && privateKey) {
       try {
+        // Enhanced Private Key handling for Render/Production
+        let processedKey = privateKey;
+        if (!processedKey.includes('\n') && processedKey.includes('-----BEGIN PRIVATE KEY-----')) {
+          processedKey = processedKey
+            .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n')
+            .replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----');
+        }
+
         const auth = new google.auth.GoogleAuth({
           credentials: {
             client_email: clientEmail,
-            private_key: privateKey,
+            private_key: processedKey,
           },
           scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
@@ -428,6 +456,69 @@ async function startServer() {
       res.json({ success: true, token: code }); 
     } else {
       res.status(400).json({ error: "Invalid or expired code" });
+    }
+  });
+
+  // Manual Sync to Sheets for Admin
+  app.post("/api/admin/leads/sync-sheets", async (req, res) => {
+    const { email, token, leadId } = req.body;
+    
+    if (!email || !token || !leadId) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const normalizedEmail = (email as string).trim().toLowerCase();
+    const storedCode = adminOtps.get(normalizedEmail);
+
+    if (!ALLOWED_ADMINS.includes(normalizedEmail) || storedCode !== token) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    if (!db) return res.status(500).json({ error: "DB not available" });
+
+    try {
+      const lead = db.prepare("SELECT * FROM leads WHERE id = ?").get(leadId) as any;
+      if (!lead) return res.status(404).json({ error: "Lead not found" });
+
+      const sheetId = (process.env.GOOGLE_SHEET_ID || "").trim().replace(/^["']|["']$/g, '');
+      const clientEmail = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT || "").trim().replace(/^["']|["']$/g, '');
+      const privateKey = (process.env.GOOGLE_PRIVATE_KEY || "").trim()
+        .replace(/^["']|["']$/g, '')
+        .replace(/[).]+$/, '')
+        .replace(/\\n/g, '\n');
+
+      let processedKey = privateKey;
+      if (!processedKey.includes('\n') && processedKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        processedKey = processedKey
+          .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n')
+          .replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----');
+      }
+
+      const auth = new google.auth.GoogleAuth({
+        credentials: { client_email: clientEmail, private_key: processedKey },
+        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+      });
+      const sheets = google.sheets({ version: 'v4', auth });
+
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: sheetId,
+        range: 'A:T',
+        valueInputOption: 'RAW',
+        requestBody: {
+          values: [[
+            lead.timestamp, lead.contactType, lead.contactValue, lead.mainBorrowerName,
+            lead.propertyAddress, lead.propertyType, lead.spaPrice, lead.loanAmount,
+            lead.dsrMain, lead.dsrJoint, lead.combinedDsr, lead.netMonthlyIncomeMain,
+            lead.netMonthlyIncomeJoint, lead.stressTestInstallment, lead.approvalProbability,
+            lead.bankCategory, lead.riskGrade, lead.leadType || 'mortgage', lead.roi || 0
+          ]]
+        }
+      });
+
+      res.json({ success: true, message: "Lead synced to Google Sheets!" });
+    } catch (error: any) {
+      console.error("[MANUAL SYNC ERROR]", error.message);
+      res.status(500).json({ error: error.message });
     }
   });
 

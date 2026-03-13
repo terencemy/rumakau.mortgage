@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, MessageSquare, ShieldCheck, ArrowRight, RefreshCw, CheckCircle2, Bell, Info } from 'lucide-react';
+import { Mail, MessageSquare, ShieldCheck, ArrowRight, RefreshCw, CheckCircle2, Bell, Info, Share2 } from 'lucide-react';
 
 interface Props {
   onVerified: (contactInfo: { type: 'email' | 'whatsapp', value: string }) => void;
