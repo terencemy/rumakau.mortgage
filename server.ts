@@ -78,6 +78,11 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Health check endpoint for Render cold starts
+  app.get("/health", (req, res) => {
+    res.status(200).send("OK");
+  });
+
   app.get("/api/verify/status", (req, res) => {
     const resendKey = (process.env.RUMAKAU_LIVE || process.env.RESEND_API_KEY || "").trim().replace(/^["']|["']$/g, '');
     const geminiKey = (process.env.GEMINI_API_KEY || "").trim().replace(/^["']|["']$/g, '');

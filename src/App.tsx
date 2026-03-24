@@ -12,11 +12,13 @@ import { ShieldCheck, Calculator, FileText, Sparkles, TrendingUp, Home, ChevronR
 import { motion, AnimatePresence } from 'motion/react';
 
 import { downloadBNMGuidelines, downloadMortgageReport, downloadInvestmentReport } from './utils/pdfGenerator';
+import { ServerWakeUp } from './components/ServerWakeUp';
 
 type ToolType = 'mortgage' | 'investment';
 type AppState = 'form' | 'verifying' | 'dashboard';
 
 export default function App() {
+  const [isServerReady, setIsServerReady] = useState(false);
   const [activeTool, setActiveTool] = useState<ToolType>('mortgage');
   const [state, setState] = useState<AppState>('form');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -209,6 +211,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-emerald-100 selection:text-emerald-900">
+      <ServerWakeUp onReady={() => setIsServerReady(true)} />
+      
       {/* Navigation */}
       <nav className="border-b border-slate-200 bg-white/50 backdrop-blur-md sticky top-0 z-50 no-print">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
