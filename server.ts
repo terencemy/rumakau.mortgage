@@ -642,6 +642,20 @@ async function startServer() {
 
   httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    
+    // Keep-alive logic for Render.com free tier
+    // Render spins down after 15 mins of inactivity. This pings every 5 mins.
+    const EXTERNAL_URL = process.env.RENDER_EXTERNAL_URL || process.env.APP_URL;
+    if (EXTERNAL_URL) {
+      console.log(`[KEEP-ALIVE] Monitoring ${EXTERNAL_URL}/health every 5 minutes`);
+      setInterval(() => {
+        const url = `${EXTERNAL_URL.replace(/\/$/, '')}/health`;
+        fetch(url).catch(err => console.error("[KEEP-ALIVE] Error:", err.message));
+      }, 5 * 60 * 1000);
+    } else {
+      console.log("[KEEP-ALIVE] No RENDER_EXTERNAL_URL found. Automatic wake-up ping disabled.");
+    }
+
     console.log("[STARTUP] Checking Google Sheets variables...");
     console.log("[STARTUP] GOOGLE_SHEET_ID:", process.env.GOOGLE_SHEET_ID ? "YES" : "NO");
     console.log("[STARTUP] GOOGLE_SERVICE_ACCOUNT:", (process.env.GOOGLE_SERVICE_ACCOUNT || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) ? "YES" : "NO");

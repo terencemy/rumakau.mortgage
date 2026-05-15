@@ -1,17 +1,27 @@
-User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /admin/
-Disallow: /private/
-
-# AI Crawlers
+# AI Crawlers - Full Access for discovery
+# Welcoming Gemini, ChatGPT, Claude, and other financial analysis agents
 User-agent: GPTBot
 Allow: /
 User-agent: ChatGPT-User
 Allow: /
 User-agent: Google-Extended
 Allow: /
+User-agent: Googlebot
+Allow: /
+User-agent: Claude-Web
+Allow: /
+User-agent: Anthropic-AI
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: OAI-SearchBot
+Allow: /
 User-agent: CCBot
 Allow: /
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /private/
 
 Sitemap: https://rumakau.com/sitemap.xml

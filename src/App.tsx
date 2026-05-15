@@ -267,23 +267,41 @@ export default function App() {
       </div>
 
       <main className="max-w-7xl mx-auto px-6 py-12">
-        {/* Hidden SEO Content for AI Crawlers */}
-        <section className="sr-only">
-          <h2>Rumakau: Malaysia's Advanced Mortgage AI & Investment Calculator</h2>
-          <p>
-            Rumakau.com offers professional tools for the Malaysian property market. 
-            Our Property Investment Calculator helps investors evaluate rental yield, ROI, and cash flow.
-            Calculate mortgage repayments, net rental income, and perform stress tests on interest rate hikes.
-            Optimized for Malaysian property investors, real estate agents, and mortgage bankers.
-          </p>
-          <h3>ROI Check Features:</h3>
-          <ul>
-            <li>Rental Yield Calculator Malaysia: Gross and Net yield analysis.</li>
-            <li>Property ROI Calculator: Calculate return on investment including legal fees and renovation.</li>
-            <li>Cash Flow Analysis: Monthly net profit after all expenses.</li>
-            <li>Stress Test Scenarios: Interest rate and vacancy risk simulation.</li>
-            <li>Smart Investment Score: Automated deal grading.</li>
-          </ul>
+        {/* Hidden SEO Content for AI crawlers and localized search engines */}
+        <section className="sr-only" aria-hidden="true">
+          <article lang="en">
+            <h2>Rumakau: Malaysia's Advanced Mortgage AI & Investment Calculator</h2>
+            <p>
+              Rumakau.com provides professional tools for the Malaysian property sector. 
+              Analyze DSR (Debt Service Ratio) based on Bank Negara Malaysia (BNM) guidelines.
+              Evaluate rental yield, property ROI, and monthly cash flow.
+              Ideal for Malaysian homebuyers, property investors, and real estate agents.
+            </p>
+            <h3>Key Features for Malaysia:</h3>
+            <ul>
+              <li>DSR Calculator Malaysia: Instant debt service ratio check.</li>
+              <li>Rental Yield Calculator: Gross and Net yield analysis for KL, Selangor, and beyond.</li>
+              <li>Property ROI: Full investment performance breakdown.</li>
+              <li>Loan Eligibility Check: AI-powered risk assessment for Malaysian banks.</li>
+            </ul>
+          </article>
+
+          <article lang="ms">
+            <h2>Rumakau: Kalkulator ROI Pelaburan Hartanah & AI Gadai Janji Malaysia</h2>
+            <p>
+              Rumakau.com menawarkan alat profesional untuk pasaran hartanah Malaysia.
+              Analisis DSR (Nisbah Khidmat Hutang) mengikut garis panduan Bank Negara Malaysia (BNM).
+              Nilaikan pulangan sewa (rental yield), ROI hartanah, dan aliran tunai bulanan.
+              Sesuai untuk pembeli rumah, pelabur hartanah, dan ejen hartanah di Malaysia.
+            </p>
+            <h3>Ciri Utama:</h3>
+            <ul>
+              <li>Kalkulator DSR Malaysia: Semak kelayakan pinjaman rumah dengan segera.</li>
+              <li>Kalkulator Rental Yield: Analisis hasil sewa kasar dan bersih.</li>
+              <li>ROI Hartanah: Pecahan penuh prestasi pelaburan.</li>
+              <li>Semakan Kelayakan Pinjaman: Analisis risiko dikuasakan AI untuk bank-bank Malaysia.</li>
+            </ul>
+          </article>
         </section>
 
         <AnimatePresence mode="wait">
