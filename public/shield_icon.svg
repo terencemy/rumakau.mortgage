@@ -1,15 +1,15 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Black Circular Background -->
-  <circle cx="256" cy="256" r="240" fill="black"/>
+  <!-- Full Size Black Circular Background -->
+  <circle cx="256" cy="256" r="256" fill="black"/>
   
-  <!-- White Filled Shield -->
-  <path d="M256 120C210 120 170 145 150 170V290C150 380 256 432 256 432C256 432 362 380 362 290V170C342 145 302 120 256 120Z" 
+  <!-- Wider White Filled Shield -->
+  <path d="M256 100C180 100 120 135 90 170V300C90 400 256 455 256 455C256 455 422 400 422 300V170C392 135 332 100 256 100Z" 
     fill="white"/>
     
-  <!-- Green Tick -->
-  <path d="M205 275L250 320L320 230" 
+  <!-- Proportional Green Tick -->
+  <path d="M190 280L245 335L335 225" 
     stroke="#10B981" 
-    stroke-width="32" 
+    stroke-width="36" 
     stroke-linecap="round" 
     stroke-linejoin="round"/>
 </svg>
