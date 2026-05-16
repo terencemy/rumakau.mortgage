@@ -1,0 +1,7 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="256" cy="256" r="240" fill="white" stroke="#10B981" stroke-width="12"/>
+  <!-- Simple minimalist shield icon -->
+  <path d="M256 120C210 120 170 145 150 165V280C150 350 256 400 256 400C256 400 362 350 362 280V165C342 145 302 120 256 120Z" fill="#10B981" stroke="#059669" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Inner shield detail -->
+  <path d="M256 160V360" stroke="white" stroke-width="12" stroke-linecap="round"/>
+</svg>
