@@ -268,7 +268,7 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-6 py-12">
         {/* Hidden SEO Content for AI crawlers and localized search engines */}
-        <section className="sr-only" aria-hidden="true">
+        <section className="sr-only">
           <article lang="en">
             <h2>Rumakau: Malaysia's Advanced Mortgage AI & Investment Calculator</h2>
             <p>
