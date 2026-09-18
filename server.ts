@@ -13,10 +13,19 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const getAppDir = () => {
+  if (typeof __dirname !== "undefined") {
+    return __dirname;
+  }
+  try {
+    return path.dirname(fileURLToPath(import.meta.url));
+  } catch {
+    return process.cwd();
+  }
+};
 
-const DATA_DIR = path.join(__dirname, "data");
+const appDir = getAppDir();
+const DATA_DIR = path.join(process.cwd(), "data");
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
@@ -75,7 +84,8 @@ async function startServer() {
       methods: ["GET", "POST"]
     }
   });
-  const PORT = 3000;
+  const isAiStudio = !!(process.env.APPLET_ID || process.env.K_SERVICE || process.env.DEFAULT_APP_PORT);
+  const PORT = isAiStudio ? 3000 : Number(process.env.PORT || 3000);
 
   app.use(express.json());
 
@@ -885,9 +895,10 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.join(__dirname, "dist")));
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(__dirname, "dist", "index.html"));
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
