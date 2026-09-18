@@ -9,6 +9,7 @@ import dotenv from "dotenv";
 import Database from "better-sqlite3";
 import { Resend } from "resend";
 import { google } from "googleapis";
+import { GoogleGenAI, Type } from "@google/genai";
 
 dotenv.config();
 
@@ -81,6 +82,256 @@ async function startServer() {
   // Health check endpoint for Render cold starts
   app.get("/health", (req, res) => {
     res.status(200).send("OK");
+  });
+
+  // Mortgage BNM calculation helper
+  function calculateDeterministicMortgage(data: any) {
+    const p = data.property || {};
+    const m = data.mainBorrower || {};
+    const j = data.jointBorrower;
+    const isJoint = !!j && !!j.name && (j.employment?.monthlyGrossIncome || 0) > 0;
+
+    const calculateNet = (gross: number, other: number = 0) => {
+      const epf = gross * 0.11;
+      const socso = Math.min(gross * 0.005, 25);
+      let pcb = 0;
+      if (gross > 10000) pcb = gross * 0.15;
+      else if (gross > 6000) pcb = gross * 0.08;
+      else if (gross > 4000) pcb = gross * 0.03;
+      const net = Math.max(0, gross - epf - socso - pcb + (other * 0.8));
+      return Math.round(net);
+    };
+
+    const grossMain = m.employment?.monthlyGrossIncome || ((m.employment?.fixedIncome || 0) + (m.employment?.variableIncome || 0)) || 5000;
+    const netIncomeMain = calculateNet(grossMain, m.employment?.otherIncome || 0);
+
+    const grossJoint = isJoint && j ? (j.employment?.monthlyGrossIncome || ((j.employment?.fixedIncome || 0) + (j.employment?.variableIncome || 0)) || 0) : 0;
+    const netIncomeJoint = isJoint && j ? calculateNet(grossJoint, j.employment?.otherIncome || 0) : 0;
+
+    const spa = p.spaPrice || 500000;
+    const loanAmount = p.loanAmount || (spa * ((p.marginRequested || 90) / 100));
+    const tenureYears = Math.min(p.loanTenure || 30, 35, Math.max(10, 70 - (m.age || 30)));
+    const nMonths = Math.max(12, tenureYears * 12);
+    const annualRate = 0.055; // 5.5% BNM stress test rate
+    const monthlyRate = annualRate / 12;
+    const stressInstallment = Math.round(
+      loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, nMonths)) / (Math.pow(1 + monthlyRate, nMonths) - 1)
+    );
+
+    const getCommitment = (c: any) => {
+      if (!c) return 0;
+      const cc = (c.creditCardOutstanding || 0) * 0.05;
+      return (c.carLoan || 0) + (c.personalLoan || 0) + cc + (c.otherLoans || 0);
+    };
+
+    const commMain = getCommitment(m.commitments);
+    const commJoint = isJoint && j ? getCommitment(j.commitments) : 0;
+
+    const dsrMain = Math.min(150, Math.round(((commMain + stressInstallment) / Math.max(1, netIncomeMain)) * 100));
+    let dsrJoint = undefined;
+    let dsrCombined = dsrMain;
+
+    if (isJoint) {
+      dsrJoint = Math.min(150, Math.round((commJoint / Math.max(1, netIncomeJoint)) * 100));
+      const totalNet = netIncomeMain + netIncomeJoint;
+      const totalComm = commMain + commJoint + stressInstallment;
+      dsrCombined = Math.min(150, Math.round((totalComm / Math.max(1, totalNet)) * 100));
+    }
+
+    const effectiveDsr = isJoint ? dsrCombined : dsrMain;
+    let riskGrade: 'A' | 'B' | 'C' = 'A';
+    let bankCategory: 'Conservative' | 'Moderate' | 'Flexible' = 'Conservative';
+    let approvalProbability = 85;
+
+    if (effectiveDsr <= 60) {
+      riskGrade = 'A';
+      bankCategory = 'Conservative';
+      approvalProbability = 88;
+    } else if (effectiveDsr <= 75) {
+      riskGrade = 'B';
+      bankCategory = 'Moderate';
+      approvalProbability = 72;
+    } else {
+      riskGrade = 'C';
+      bankCategory = 'Flexible';
+      approvalProbability = 48;
+    }
+
+    if (m.commitments?.ccrisStatus === 'Late Payment') {
+      approvalProbability = Math.max(20, approvalProbability - 25);
+      riskGrade = 'C';
+    } else if (m.commitments?.ccrisStatus === 'Restructured') {
+      approvalProbability = Math.max(15, approvalProbability - 35);
+      riskGrade = 'C';
+    }
+
+    const riskFlags: string[] = [];
+    if (effectiveDsr > 70) riskFlags.push(`DSR (${effectiveDsr}%) melebihi had tanda aras standard bank komersial 70%`);
+    if ((m.age || 30) + tenureYears > 70) riskFlags.push(`Umur (${m.age}) + Tempoh Pinjaman (${tenureYears} thn) melebihi had maksimum 70 tahun`);
+    if (m.commitments?.ccrisStatus && m.commitments.ccrisStatus !== 'Clean') riskFlags.push(`Rekod CCRIS menunjukkan status "${m.commitments?.ccrisStatus}"`);
+
+    const structuringImprovements: string[] = [];
+    if (effectiveDsr > 65) {
+      structuringImprovements.push("Selesaikan baki kad kredit atau pinjaman peribadi untuk menurunkan nisbah komitmen bulanan.");
+      if (!isJoint) {
+        structuringImprovements.push("Pertimbangkan permohonan bersama (Joint Applicant) bersama pasangan atau ahli keluarga terdekat.");
+      }
+    }
+    if (tenureYears < 30 && (m.age || 30) < 40) {
+      structuringImprovements.push(`Lanjutkan tempoh pinjaman kepada 30-35 tahun untuk mengurangkan ansuran bulanan.`);
+    }
+    structuringImprovements.push("Sediakan simpanan sokongan (Penyata KWSP Akaun 2 / Simpanan Tetap) bagi memperkukuh profil kredit peminjam.");
+
+    const idealTenure = `${Math.min(35, Math.max(15, 70 - (m.age || 30)))} Tahun`;
+
+    return {
+      dsrMain,
+      dsrJoint,
+      dsrCombined,
+      netMonthlyIncomeMain: netIncomeMain,
+      netMonthlyIncomeJoint: isJoint ? netIncomeJoint : undefined,
+      stressTestInstallment: stressInstallment,
+      isJointApplication: isJoint,
+      riskGrade,
+      loanTypeSuitability: `Sesuai untuk ${(data.loanTypes || ['Conventional']).join(", ")} tertakluk kepada kelulusan margin bank.`,
+      approvalProbability,
+      riskFlags,
+      strategy: effectiveDsr <= 65
+        ? "Profil peminjam kukuh. Kemukakan kepada Tier-1 Commercial Banks (Maybank, Public Bank, CIMB) untuk tawaran kadar faedah terbaik."
+        : "Kemukakan kepada bank yang menawarkan formula pengiraan DSR fleksibel (Hong Leong, RHB, AmBank) atau pertimbangkan permohonan bersama.",
+      requiredDocuments: [
+        "Salinan Kad Pengenalan (Depan & Belakang)",
+        "Slip Gaji 3 Bulan Terkini (6 bulan jika ada elaun/komisen)",
+        "Penyata Bank Kemasukan Gaji 3 Bulan Terkini",
+        "Penyata KWSP Terkini",
+        "Salinan Surat Tawaran Jual Beli (Booking Receipt / SPA draft)"
+      ],
+      clientExplanationBM: `Berdasarkan analisis pembiayaan, anggaran DSR anda adalah sekitar ${effectiveDsr}%. Anggaran ansuran ujian tekanan adalah RM${stressInstallment.toLocaleString()} sebulan dengan anggaran peluang kelulusan sekitar ${approvalProbability}%.`,
+      structuringImprovements,
+      idealTenure,
+      bankCategory
+    };
+  }
+
+  async function runMortgageAiAnalysis(data: any) {
+    const apiKey = (process.env.GEMINI_API_KEY || "").trim().replace(/^["']|["']$/g, '');
+    if (!apiKey) {
+      console.log("[MORTGAGE] No server GEMINI_API_KEY, using deterministic BNM calculation");
+      return calculateDeterministicMortgage(data);
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+    const prompt = `
+      You are a Malaysia Mortgage Risk & Structuring AI Engine for Rumakau.com. 
+      Analyze the following mortgage application data and provide a detailed risk assessment based on Malaysian banking standards and Bank Negara Malaysia (BNM) guidelines.
+
+      APPLICATION DATA:
+      ${JSON.stringify(data, null, 2)}
+
+      TASKS:
+      1. Calculate Net Monthly Income for each borrower (Gross minus EPF 11%, SOCSO, PCB).
+      2. Calculate the New Mortgage Installment using BNM Stress Test Rate (5.5% - 6.0%).
+      3. Calculate DSR (Debt Service Ratio) for main borrower and joint borrower (if any).
+      4. Calculate combined DSR.
+      5. Evaluate eligibility for requested loan types: ${(data.loanTypes || []).join(", ")}.
+      6. Identify risk flags (tenure, age, DSR thresholds, CCRIS).
+      7. Suggest suitable bank category (Conservative, Moderate, Flexible).
+      8. Estimate approval probability % (0-100).
+      9. Suggest structuring improvements.
+      10. Suggest ideal loan tenure (Max 35 years, up to age 70).
+      11. Suggest required documents.
+      12. Provide a clear client explanation summary in Bahasa Malaysia.
+
+      RULES:
+      - Max loan tenure is 35 years.
+      - Max age is 70 years.
+      - Return strict JSON matching the schema.
+    `;
+
+    const candidateModels = ["gemini-3-flash-preview", "gemini-3.8-flash", "gemini-3.6-flash"];
+    for (const model of candidateModels) {
+      try {
+        console.log(`[MORTGAGE] Attempting analysis with ${model}...`);
+        const response = await ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                dsrMain: { type: Type.NUMBER, description: "Estimated DSR percentage for main borrower" },
+                dsrJoint: { type: Type.NUMBER, description: "Estimated DSR percentage for joint borrower (if any)" },
+                dsrCombined: { type: Type.NUMBER, description: "Combined DSR percentage" },
+                netMonthlyIncomeMain: { type: Type.NUMBER, description: "Estimated Net Monthly Income for main borrower" },
+                netMonthlyIncomeJoint: { type: Type.NUMBER, description: "Estimated Net Monthly Income for joint borrower" },
+                stressTestInstallment: { type: Type.NUMBER, description: "Calculated installment using stress test rate" },
+                isJointApplication: { type: Type.BOOLEAN, description: "Whether it is a joint application" },
+                riskGrade: { type: Type.STRING, description: "Risk Grade (A, B, or C)" },
+                loanTypeSuitability: { type: Type.STRING, description: "Suitability analysis for loan types" },
+                approvalProbability: { type: Type.NUMBER, description: "Approval probability percentage (0-100)" },
+                riskFlags: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of identified risk flags" },
+                strategy: { type: Type.STRING, description: "Risk mitigation and structuring strategy" },
+                requiredDocuments: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of required supporting documents" },
+                clientExplanationBM: { type: Type.STRING, description: "Short client explanation in Bahasa Malaysia" },
+                structuringImprovements: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Specific structuring improvements" },
+                idealTenure: { type: Type.STRING, description: "Suggested ideal loan tenure" },
+                bankCategory: { type: Type.STRING, description: "Suitable bank category (Conservative, Moderate, Flexible)" }
+              },
+              required: [
+                "dsrMain", "dsrCombined", "netMonthlyIncomeMain", "stressTestInstallment", "isJointApplication", "riskGrade", "loanTypeSuitability", "approvalProbability", 
+                "riskFlags", "strategy", "requiredDocuments", "clientExplanationBM",
+                "structuringImprovements", "idealTenure", "bankCategory"
+              ]
+            }
+          }
+        });
+
+        if (response.text) {
+          const parsed = JSON.parse(response.text);
+          console.log(`[MORTGAGE] Analysis successful with ${model}`);
+          return parsed;
+        }
+      } catch (err: any) {
+        console.warn(`[MORTGAGE] ${model} failed (${err.message || err}), trying next model...`);
+      }
+    }
+
+    console.log("[MORTGAGE] Falling back to deterministic calculation");
+    return calculateDeterministicMortgage(data);
+  }
+
+  // Mortgage AI Analysis API endpoint
+  app.post("/api/mortgage/analyze", async (req, res) => {
+    try {
+      const data = req.body;
+      const result = await runMortgageAiAnalysis(data);
+      res.json(result);
+    } catch (err: any) {
+      console.error("[API MORTGAGE ERROR]", err);
+      try {
+        const fallback = calculateDeterministicMortgage(req.body);
+        res.json(fallback);
+      } catch (fallbackErr: any) {
+        res.status(500).json({ error: err.message || "Failed to analyze mortgage" });
+      }
+    }
+  });
+
+  app.post("/api/analyze", async (req, res) => {
+    try {
+      const data = req.body;
+      const result = await runMortgageAiAnalysis(data);
+      res.json(result);
+    } catch (err: any) {
+      console.error("[API ANALYZE ERROR]", err);
+      try {
+        const fallback = calculateDeterministicMortgage(req.body);
+        res.json(fallback);
+      } catch (fallbackErr: any) {
+        res.status(500).json({ error: err.message || "Failed to analyze mortgage" });
+      }
+    }
   });
 
   app.get("/api/verify/status", (req, res) => {

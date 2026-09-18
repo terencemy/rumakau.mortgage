@@ -1,5 +1,6 @@
 {
   "name": "Rumakau | Mortgage & Investment AI",
   "description": "Professional Malaysia mortgage DSR structuring engine and property investment calculator for investors and bankers.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
